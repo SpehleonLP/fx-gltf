@@ -176,3 +176,72 @@ TEST(EeRoundTrip, MaterialsVariants)
     ASSERT_EQ(ee2.primitives[0].extensions.variantMappings.size(), 2u);
     EXPECT_EQ(ee2.primitives[0].extensions.variantMappings[1].material, 1);
 }
+
+// msft_lod.gltf: node 0 ("lod0") carries MSFT_lod.ids=[1] (extension scope) and
+// extras.MSFT_screencoverage=[0.5,0.01]; node 1 ("lod1") is the standalone lower
+// LOD. Round-trips the typed ee fields and asserts the re-packed JSON blob.
+TEST(EeRoundTrip, NodeMsftLodIdsAndScreencoverage)
+{
+    fx::gltf::Document doc = LoadFixture("msft_lod.gltf");
+    fx::ExtensionsAndExtras ee; ee.Unpack(doc);
+    ASSERT_EQ(ee.nodes.size(), 2u);
+
+    ASSERT_EQ(ee.nodes[0].extensions.msftLodIds.size(), 1u);
+    EXPECT_EQ(ee.nodes[0].extensions.msftLodIds[0], 1);
+
+    ASSERT_EQ(ee.nodes[0].extras.msftScreencoverage.size(), 2u);
+    EXPECT_FLOAT_EQ(ee.nodes[0].extras.msftScreencoverage[0], 0.5f);
+    EXPECT_FLOAT_EQ(ee.nodes[0].extras.msftScreencoverage[1], 0.01f);
+
+    // Repack → the blob keeps both the extension ids and the extras coverage.
+    ee.Pack(doc);
+    auto& next = doc.nodes[0].extensionsAndExtras["extensions"];
+    ASSERT_EQ(next.count("MSFT_lod"), 1u);
+    ASSERT_EQ(next["MSFT_lod"]["ids"].size(), 1u);
+    EXPECT_EQ(next["MSFT_lod"]["ids"][0].get<int>(), 1);
+    auto& nxtra = doc.nodes[0].extensionsAndExtras["extras"];
+    ASSERT_EQ(nxtra.count("MSFT_screencoverage"), 1u);
+    EXPECT_FLOAT_EQ(nxtra["MSFT_screencoverage"][0].get<float>(), 0.5f);
+    EXPECT_FLOAT_EQ(nxtra["MSFT_screencoverage"][1].get<float>(), 0.01f);
+
+    // Re-Unpack the just-Packed doc — proves a true typed round-trip.
+    fx::ExtensionsAndExtras ee2; ee2.Unpack(doc);
+    ASSERT_EQ(ee2.nodes.size(), 2u);
+    ASSERT_EQ(ee2.nodes[0].extensions.msftLodIds.size(), 1u);
+    EXPECT_EQ(ee2.nodes[0].extensions.msftLodIds[0], 1);
+    ASSERT_EQ(ee2.nodes[0].extras.msftScreencoverage.size(), 2u);
+    EXPECT_FLOAT_EQ(ee2.nodes[0].extras.msftScreencoverage[1], 0.01f);
+}
+
+// msft_lod_mesh.gltf: mesh 0 carries MSFT_lod.ids=[1] + extras coverage. This
+// fixture is mesh-bearing/buffer-less, so it uses the ee Unpack->Pack->re-Unpack
+// path (NOT SaveReloadText, which throws on such fixtures).
+TEST(EeRoundTrip, MeshMsftLodIdsAndScreencoverage)
+{
+    fx::gltf::Document doc = LoadFixture("msft_lod_mesh.gltf");
+    fx::ExtensionsAndExtras ee; ee.Unpack(doc);
+    ASSERT_EQ(ee.meshes.size(), 2u);
+
+    ASSERT_EQ(ee.meshes[0].extensions.msftLodIds.size(), 1u);
+    EXPECT_EQ(ee.meshes[0].extensions.msftLodIds[0], 1);
+    ASSERT_EQ(ee.meshes[0].extras.msftScreencoverage.size(), 2u);
+    EXPECT_FLOAT_EQ(ee.meshes[0].extras.msftScreencoverage[0], 0.8f);
+    EXPECT_FLOAT_EQ(ee.meshes[0].extras.msftScreencoverage[1], 0.02f);
+
+    // Repack → blob keeps the values.
+    ee.Pack(doc);
+    auto& mext = doc.meshes[0].extensionsAndExtras["extensions"];
+    ASSERT_EQ(mext.count("MSFT_lod"), 1u);
+    EXPECT_EQ(mext["MSFT_lod"]["ids"][0].get<int>(), 1);
+    auto& mxtra = doc.meshes[0].extensionsAndExtras["extras"];
+    ASSERT_EQ(mxtra.count("MSFT_screencoverage"), 1u);
+    EXPECT_FLOAT_EQ(mxtra["MSFT_screencoverage"][0].get<float>(), 0.8f);
+
+    // Re-Unpack the just-Packed doc — true typed round-trip.
+    fx::ExtensionsAndExtras ee2; ee2.Unpack(doc);
+    ASSERT_EQ(ee2.meshes.size(), 2u);
+    ASSERT_EQ(ee2.meshes[0].extensions.msftLodIds.size(), 1u);
+    EXPECT_EQ(ee2.meshes[0].extensions.msftLodIds[0], 1);
+    ASSERT_EQ(ee2.meshes[0].extras.msftScreencoverage.size(), 2u);
+    EXPECT_FLOAT_EQ(ee2.meshes[0].extras.msftScreencoverage[0], 0.8f);
+}

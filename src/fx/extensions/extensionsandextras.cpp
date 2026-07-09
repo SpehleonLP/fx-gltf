@@ -392,6 +392,10 @@ void to_json(nlohmann::json & json, Node const& db)
 
 	if(db.lightIndex != -1)
 		json["KHR_lights_punctual"]["light"] = db.lightIndex;
+
+	// MSFT_lod — alternate (lower-LOD) node indices.
+	if(!db.msftLodIds.empty())
+		json["MSFT_lod"]["ids"] = db.msftLodIds;
 }
 
 void from_json(const nlohmann::json & json, Node & db)
@@ -408,6 +412,23 @@ void from_json(const nlohmann::json & json, Node & db)
 
 	if(auto it = json.find("KHR_lights_punctual"); it != json.end())
 		fx::gltf::detail::ReadOptionalField("light", *it, db.lightIndex);
+
+	// MSFT_lod — alternate (lower-LOD) node indices.
+	if(auto it = json.find("MSFT_lod"); it != json.end())
+		fx::gltf::detail::ReadOptionalField("ids", *it, db.msftLodIds);
+}
+
+// MSFT_lod — mesh-scope `ids` = alternate (lower-LOD) mesh indices.
+void to_json(nlohmann::json & json, Mesh const& db)
+{
+	if(!db.msftLodIds.empty())
+		json["MSFT_lod"]["ids"] = db.msftLodIds;
+}
+
+void from_json(const nlohmann::json & json, Mesh & db)
+{
+	if(auto it = json.find("MSFT_lod"); it != json.end())
+		fx::gltf::detail::ReadOptionalField("ids", *it, db.msftLodIds);
 }
 
 void to_json(nlohmann::json & json, Texture const& extras)
@@ -496,6 +517,7 @@ void to_json(nlohmann::json & json, Mesh const& db)
 {
 	fx::gltf::detail::WriteField("Lifaundi_JointsUsed", json, db.Lifaundi_JointsUsed);
 	fx::gltf::detail::WriteField("targetNames", json, db.targetNames);
+	fx::gltf::detail::WriteField("MSFT_screencoverage", json, db.msftScreencoverage);
 }
 
 void from_json(const nlohmann::json & json, Node & db)
@@ -503,7 +525,8 @@ void from_json(const nlohmann::json & json, Node & db)
 	static std::string _capability = "capability";
 	fx::gltf::detail::ReadOptionalField("Lifaundi_PartId", json, db.Lifaundi_PartId);
 	fx::gltf::detail::ReadOptionalField("Lifaundi_Parent", json, db.Lifaundi_Parent);
-	
+	fx::gltf::detail::ReadOptionalField("MSFT_screencoverage", json, db.msftScreencoverage);
+
 	for(auto i = json.cbegin(); i != json.cend(); ++i)
 	{
 		std::string key = i.key();
@@ -539,13 +562,14 @@ void to_json(nlohmann::json & json, Node const& db)
 {
 	fx::gltf::detail::WriteField("Lifaundi_PartId", json, db.Lifaundi_PartId, -1);
 	fx::gltf::detail::WriteField("Lifaundi_Parent", json, db.Lifaundi_Parent, -1);
-	
+	fx::gltf::detail::WriteField("MSFT_screencoverage", json, db.msftScreencoverage);
 }
 
 void from_json(const nlohmann::json & json, Mesh & db)
 {
 	fx::gltf::detail::ReadOptionalField("Lifaundi_JointsUsed", json, db.Lifaundi_JointsUsed);
 	fx::gltf::detail::ReadOptionalField("targetNames", json, db.targetNames);
+	fx::gltf::detail::ReadOptionalField("MSFT_screencoverage", json, db.msftScreencoverage);
 }
 
 }

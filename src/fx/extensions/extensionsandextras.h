@@ -75,7 +75,14 @@ struct Material
 		&& emissiveStrength == it.emissiveStrength && ior == it.ior; }
 };
 
-typedef ::Empty Mesh;
+struct Mesh
+{
+	// MSFT_lod — `ids` = alternate (lower-LOD) mesh indices into doc.meshes.
+	std::vector<int32_t> msftLodIds;
+
+	bool empty() const { return msftLodIds.empty(); }
+	bool operator==(Mesh const& it) const { return msftLodIds == it.msftLodIds; }
+};
 
 // KHR_materials_variants — per-primitive `mappings`. Note: the ee "Primitive"
 // scope is FLATTENED (mesh-major/primitive-minor) at Pack/Unpack time because
@@ -105,6 +112,7 @@ struct Node
 	LF::RinTinTin			rintintin;
 	bool					visible{true};
 	int32_t					lightIndex{-1};	// KHR_lights_punctual: index into Document::punctualLights
+	std::vector<int32_t>	msftLodIds;		// MSFT_lod: alternate (lower-LOD) node indices into Document::nodes
 
 	struct GpuInstancing
 	{
@@ -113,8 +121,8 @@ struct Node
 		bool operator==(GpuInstancing const& it) const { return attributes == it.attributes; }
 	} gpuInstancing;
 
-	bool empty() const { return AGI_articulations.empty() && rintintin.empty() && visible && gpuInstancing.empty() && lightIndex == -1; }
-	bool operator==(Node const& it) const { return AGI_articulations == it.AGI_articulations && visible == it.visible && gpuInstancing == it.gpuInstancing && lightIndex == it.lightIndex; }
+	bool empty() const { return AGI_articulations.empty() && rintintin.empty() && visible && gpuInstancing.empty() && lightIndex == -1 && msftLodIds.empty(); }
+	bool operator==(Node const& it) const { return AGI_articulations == it.AGI_articulations && visible == it.visible && gpuInstancing == it.gpuInstancing && lightIndex == it.lightIndex && msftLodIds == it.msftLodIds; }
 
 };
 
@@ -168,6 +176,7 @@ void to_json(nlohmann::json & json, Animation const& db);
 void to_json(nlohmann::json & json, Image const& db);
 void to_json(nlohmann::json & json, Sampler const& db);
 void to_json(nlohmann::json & json, Document const& db);
+void to_json(nlohmann::json & json, Mesh const& db);
 void to_json(nlohmann::json & json, Primitive const& db);
 void to_json(nlohmann::json & json, Node const& db);
 void to_json(nlohmann::json & json, Texture const& extras);
@@ -177,6 +186,7 @@ void from_json(const nlohmann::json & json, Animation & db);
 void from_json(const nlohmann::json & json, Image & db);
 void from_json(const nlohmann::json & json, Sampler & db);
 void from_json(const nlohmann::json & json, Document & db);
+void from_json(const nlohmann::json & json, Mesh & db);
 void from_json(const nlohmann::json & json, Primitive & db);
 void from_json(const nlohmann::json & json, Node & db);
 void from_json(const nlohmann::json & json, Texture & extras);
@@ -218,9 +228,10 @@ struct Mesh
 	
 	std::vector<JointsUsed> Lifaundi_JointsUsed;
 	std::vector<std::string> targetNames;
-	
-	bool empty() const { return Lifaundi_JointsUsed.empty(); }
-	bool operator==(Mesh const& it) const { return Lifaundi_JointsUsed == it.Lifaundi_JointsUsed; }
+	std::vector<float>       msftScreencoverage;	// MSFT_lod: per-LOD screen-coverage thresholds
+
+	bool empty() const { return Lifaundi_JointsUsed.empty() && msftScreencoverage.empty(); }
+	bool operator==(Mesh const& it) const { return Lifaundi_JointsUsed == it.Lifaundi_JointsUsed && msftScreencoverage == it.msftScreencoverage; }
 };
 
 void to_json(nlohmann::json & , Mesh const& );
@@ -231,9 +242,10 @@ struct Node
 	int Lifaundi_PartId{-1};
 	int Lifaundi_Parent{-1};
 	std::string capability;
-	
-	bool empty() const { return Lifaundi_PartId == -1 && Lifaundi_Parent == -1; }
-	bool operator==(Node const& it) const { return Lifaundi_PartId == it.Lifaundi_PartId && Lifaundi_Parent == it.Lifaundi_Parent; }
+	std::vector<float> msftScreencoverage;	// MSFT_lod: per-LOD screen-coverage thresholds
+
+	bool empty() const { return Lifaundi_PartId == -1 && Lifaundi_Parent == -1 && msftScreencoverage.empty(); }
+	bool operator==(Node const& it) const { return Lifaundi_PartId == it.Lifaundi_PartId && Lifaundi_Parent == it.Lifaundi_Parent && msftScreencoverage == it.msftScreencoverage; }
 };
 
 typedef ::Empty Sampler;
