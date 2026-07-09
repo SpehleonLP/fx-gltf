@@ -126,7 +126,16 @@ struct Node
 
 };
 
-typedef ::Empty Scene;
+// EXT_lights_image_based — per-scene `light` index into Document::iblLights.
+// (Promoted from ::Empty for task 9.)
+struct Scene
+{
+	int32_t iblLightIndex{-1};
+
+	bool empty() const { return iblLightIndex == -1; }
+	bool operator==(Scene const& it) const { return iblLightIndex == it.iblLightIndex; }
+};
+
 typedef ::Empty Skin;
 
 struct Texture
@@ -157,6 +166,26 @@ struct PunctualLight
 	}
 };
 
+// EXT_lights_image_based — one entry of the doc-level `lights` array. Never
+// GC-compacted (the array length is invariant). Only specularImages[*][*],
+// which index into Document::images, are mark/remapped by the GC.
+struct IblLight
+{
+	std::string							name;
+	std::array<float, 4>				rotation{0, 0, 0, 1};	// quaternion, identity default
+	float								intensity{1.f};
+	std::array<std::array<float, 3>, 9>	irradianceCoefficients{};	// 9 SH RGB triples
+	std::vector<std::vector<int32_t>>	specularImages;			// per-mip x 6 faces -> image indices
+	int32_t								specularImageSize{0};
+
+	bool operator==(IblLight const& it) const
+	{
+		return name == it.name && rotation == it.rotation && intensity == it.intensity
+			&& irradianceCoefficients == it.irradianceCoefficients
+			&& specularImages == it.specularImages && specularImageSize == it.specularImageSize;
+	}
+};
+
 struct Document
 {
 	AGI::Articulations AGI_articulations;
@@ -164,11 +193,12 @@ struct Document
 
 	std::vector<PunctualLight> punctualLights;	// KHR_lights_punctual — doc-level array, never GC-compacted
 	std::vector<std::string>   variantNames;	// KHR_materials_variants — doc-level `variants` names, never GC-compacted
+	std::vector<IblLight>      iblLights;		// EXT_lights_image_based — doc-level array, never GC-compacted
 
-	bool empty() const { return AGI_articulations.empty() && punctualLights.empty() && variantNames.empty(); };
+	bool empty() const { return AGI_articulations.empty() && punctualLights.empty() && variantNames.empty() && iblLights.empty(); };
 	bool operator==(Document const& it) const {
 		return AGI_articulations == it.AGI_articulations && punctualLights == it.punctualLights
-			&& variantNames == it.variantNames; }
+			&& variantNames == it.variantNames && iblLights == it.iblLights; }
 };
 
 
@@ -179,6 +209,7 @@ void to_json(nlohmann::json & json, Document const& db);
 void to_json(nlohmann::json & json, Mesh const& db);
 void to_json(nlohmann::json & json, Primitive const& db);
 void to_json(nlohmann::json & json, Node const& db);
+void to_json(nlohmann::json & json, Scene const& db);
 void to_json(nlohmann::json & json, Texture const& extras);
 void to_json(nlohmann::json & json, Material const& material);
 
@@ -189,6 +220,7 @@ void from_json(const nlohmann::json & json, Document & db);
 void from_json(const nlohmann::json & json, Mesh & db);
 void from_json(const nlohmann::json & json, Primitive & db);
 void from_json(const nlohmann::json & json, Node & db);
+void from_json(const nlohmann::json & json, Scene & db);
 void from_json(const nlohmann::json & json, Texture & extras);
 void from_json(const nlohmann::json & json, Material & material);
 

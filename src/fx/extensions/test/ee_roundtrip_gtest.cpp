@@ -245,3 +245,70 @@ TEST(EeRoundTrip, MeshMsftLodIdsAndScreencoverage)
     ASSERT_EQ(ee2.meshes[0].extras.msftScreencoverage.size(), 2u);
     EXPECT_FLOAT_EQ(ee2.meshes[0].extras.msftScreencoverage[0], 0.8f);
 }
+
+// ibl.gltf: doc-level EXT_lights_image_based.lights (1 entry: 2 mips x 6 faces
+// of specularImages, 9 SH irradianceCoefficients, rotation/intensity/
+// specularImageSize) + scene EXT_lights_image_based.light index. Exercises the
+// promoted Extensions::Scene struct and the nested-array (de)serialization.
+TEST(EeRoundTrip, DocLevelIblLightAndSceneIndex)
+{
+    fx::gltf::Document doc = LoadFixture("ibl.gltf");
+    fx::ExtensionsAndExtras ee; ee.Unpack(doc);
+
+    // Doc-level IBL light — never GC-compacted, one entry.
+    ASSERT_EQ(ee.document.extensions.iblLights.size(), 1u);
+    auto const& L = ee.document.extensions.iblLights[0];
+    EXPECT_EQ(L.name, "env0");
+    EXPECT_FLOAT_EQ(L.rotation[0], 0.0f);
+    EXPECT_FLOAT_EQ(L.rotation[3], 1.0f);
+    EXPECT_FLOAT_EQ(L.intensity, 2.0f);
+    EXPECT_EQ(L.specularImageSize, 256);
+
+    // 9 SH coefficient triples, exact values.
+    for(int i = 0; i < 9; ++i)
+    {
+        EXPECT_FLOAT_EQ(L.irradianceCoefficients[i][0], (i + 1) * 0.10f);
+        EXPECT_FLOAT_EQ(L.irradianceCoefficients[i][1], (i + 1) * 0.10f + 0.01f);
+        EXPECT_FLOAT_EQ(L.irradianceCoefficients[i][2], (i + 1) * 0.10f + 0.02f);
+    }
+
+    // Nested specularImages: 2 mips x 6 faces.
+    ASSERT_EQ(L.specularImages.size(), 2u);
+    ASSERT_EQ(L.specularImages[0].size(), 6u);
+    ASSERT_EQ(L.specularImages[1].size(), 6u);
+    for(int f = 0; f < 6; ++f)
+    {
+        EXPECT_EQ(L.specularImages[0][f], f);
+        EXPECT_EQ(L.specularImages[1][f], 6 + f);
+    }
+
+    // Scene index (promoted Extensions::Scene).
+    ASSERT_EQ(ee.scenes.size(), 1u);
+    EXPECT_EQ(ee.scenes[0].extensions.iblLightIndex, 0);
+
+    // Repack → the blob keeps the nested values.
+    ee.Pack(doc);
+    auto& jibl = doc.extensionsAndExtras["extensions"]["EXT_lights_image_based"]["lights"];
+    ASSERT_EQ(jibl.size(), 1u);
+    EXPECT_EQ(jibl[0]["specularImageSize"].get<int>(), 256);
+    EXPECT_FLOAT_EQ(jibl[0]["intensity"].get<float>(), 2.0f);
+    auto& jsi = jibl[0]["specularImages"];
+    ASSERT_EQ(jsi.size(), 2u);
+    ASSERT_EQ(jsi[1].size(), 6u);
+    EXPECT_EQ(jsi[1][5].get<int>(), 11);
+    auto& jsh = jibl[0]["irradianceCoefficients"];
+    ASSERT_EQ(jsh.size(), 9u);
+    EXPECT_FLOAT_EQ(jsh[8][2].get<float>(), 0.92f);
+    EXPECT_EQ(doc.scenes[0].extensionsAndExtras["extensions"]["EXT_lights_image_based"]["light"].get<int>(), 0);
+
+    // Re-Unpack the just-Packed doc — proves a true typed round-trip.
+    fx::ExtensionsAndExtras ee2; ee2.Unpack(doc);
+    ASSERT_EQ(ee2.document.extensions.iblLights.size(), 1u);
+    auto const& L2 = ee2.document.extensions.iblLights[0];
+    ASSERT_EQ(L2.specularImages.size(), 2u);
+    EXPECT_EQ(L2.specularImages[1][5], 11);
+    EXPECT_EQ(L2.specularImageSize, 256);
+    EXPECT_FLOAT_EQ(L2.irradianceCoefficients[4][1], 0.51f);
+    ASSERT_EQ(ee2.scenes.size(), 1u);
+    EXPECT_EQ(ee2.scenes[0].extensions.iblLightIndex, 0);
+}

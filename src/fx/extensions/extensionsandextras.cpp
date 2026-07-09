@@ -277,6 +277,62 @@ static void from_json(const nlohmann::json & json, PunctualLight & light)
 	}
 }
 
+// EXT_lights_image_based — one doc-level IBL light. Serialized field-by-field
+// so the nested per-mip x per-face specularImages and the 9 SH coefficient
+// triples round-trip byte-faithfully. Required properties (irradianceCoefficients,
+// specularImages, specularImageSize) are always emitted; rotation/intensity are
+// emitted only when non-default; name only when present.
+static void to_json(nlohmann::json & json, IblLight const& light)
+{
+	if(!light.name.empty())
+		json["name"] = light.name;
+
+	if(light.rotation != std::array<float, 4>{0, 0, 0, 1})
+		json["rotation"] = (std::array<float, 4> const&)light.rotation;
+
+	if(light.intensity != 1.f)
+		json["intensity"] = light.intensity;
+
+	nlohmann::json sh = nlohmann::json::array();
+	for(auto const& c : light.irradianceCoefficients)
+		sh.push_back((std::array<float, 3> const&)c);
+	json["irradianceCoefficients"] = std::move(sh);
+
+	nlohmann::json mips = nlohmann::json::array();
+	for(auto const& mip : light.specularImages)
+		mips.push_back(mip);
+	json["specularImages"] = std::move(mips);
+
+	json["specularImageSize"] = light.specularImageSize;
+}
+
+static void from_json(const nlohmann::json & json, IblLight & light)
+{
+	fx::gltf::detail::ReadOptionalField("name", json, light.name);
+	fx::gltf::detail::ReadOptionalField("rotation", json, (std::array<float, 4>&)light.rotation);
+	fx::gltf::detail::ReadOptionalField("intensity", json, light.intensity);
+	fx::gltf::detail::ReadOptionalField("specularImageSize", json, light.specularImageSize);
+
+	if(auto it = json.find("irradianceCoefficients"); it != json.end() && it->is_array())
+		for(size_t i = 0; i < light.irradianceCoefficients.size() && i < it->size(); ++i)
+			(std::array<float, 3>&)light.irradianceCoefficients[i] = (*it)[i].get<std::array<float, 3>>();
+
+	if(auto it = json.find("specularImages"); it != json.end() && it->is_array())
+	{
+		light.specularImages.clear();
+		light.specularImages.reserve(it->size());
+		for(auto const& mip : *it)
+		{
+			std::vector<int32_t> faces;
+			if(mip.is_array())
+				for(auto const& face : mip)
+					if(face.is_number_integer())
+						faces.push_back(face.get<int32_t>());
+			light.specularImages.push_back(std::move(faces));
+		}
+	}
+}
+
 void to_json(nlohmann::json & json, Document const& db)
 {
 	fx::gltf::detail::WriteField("AGI_articulations", json, db.AGI_articulations);
@@ -304,6 +360,19 @@ void to_json(nlohmann::json & json, Document const& db)
 			variants.push_back(std::move(j));
 		}
 		json["KHR_materials_variants"]["variants"] = std::move(variants);
+	}
+
+	// EXT_lights_image_based — doc-level `lights` array (never GC-compacted).
+	if(!db.iblLights.empty())
+	{
+		nlohmann::json lights = nlohmann::json::array();
+		for(auto const& light : db.iblLights)
+		{
+			nlohmann::json j;
+			to_json(j, light);
+			lights.push_back(std::move(j));
+		}
+		json["EXT_lights_image_based"]["lights"] = std::move(lights);
 	}
 }
 
@@ -336,6 +405,21 @@ void from_json(const nlohmann::json & json, Document & db)
 				std::string name;
 				fx::gltf::detail::ReadOptionalField("name", j, name);
 				db.variantNames.push_back(std::move(name));
+			}
+		}
+	}
+
+	// EXT_lights_image_based — doc-level `lights` array (index-stable).
+	if(auto it = json.find("EXT_lights_image_based"); it != json.end())
+	{
+		if(auto lights = it->find("lights"); lights != it->end() && lights->is_array())
+		{
+			db.iblLights.reserve(lights->size());
+			for(auto const& j : *lights)
+			{
+				IblLight light;
+				from_json(j, light);
+				db.iblLights.push_back(std::move(light));
 			}
 		}
 	}
@@ -416,6 +500,20 @@ void from_json(const nlohmann::json & json, Node & db)
 	// MSFT_lod — alternate (lower-LOD) node indices.
 	if(auto it = json.find("MSFT_lod"); it != json.end())
 		fx::gltf::detail::ReadOptionalField("ids", *it, db.msftLodIds);
+}
+
+// EXT_lights_image_based — per-scene `light` index into the doc-level IBL
+// lights array.
+void to_json(nlohmann::json & json, Scene const& db)
+{
+	if(db.iblLightIndex != -1)
+		json["EXT_lights_image_based"]["light"] = db.iblLightIndex;
+}
+
+void from_json(const nlohmann::json & json, Scene & db)
+{
+	if(auto it = json.find("EXT_lights_image_based"); it != json.end())
+		fx::gltf::detail::ReadOptionalField("light", *it, db.iblLightIndex);
 }
 
 // MSFT_lod — mesh-scope `ids` = alternate (lower-LOD) mesh indices.
