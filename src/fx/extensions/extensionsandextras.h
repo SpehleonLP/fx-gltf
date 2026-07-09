@@ -62,9 +62,13 @@ struct Material
 
 	KHR::materials::unlit unlit;
 
+	float emissiveStrength{1.f};
+	float ior{1.5f};
 
-	bool empty() const { return pbrSpecularGlossiness.empty() && unlit.empty() && clearcoat.empty() && sheen.empty(); }
-	bool operator==(Material const& it) const { return pbrSpecularGlossiness == it.pbrSpecularGlossiness && unlit == it.unlit && clearcoat == it.clearcoat && sheen == it.sheen; }
+	bool empty() const { return pbrSpecularGlossiness.empty() && unlit.empty() && clearcoat.empty() && sheen.empty()
+		&& emissiveStrength == 1.f && ior == 1.5f; }
+	bool operator==(Material const& it) const { return pbrSpecularGlossiness == it.pbrSpecularGlossiness && unlit == it.unlit && clearcoat == it.clearcoat && sheen == it.sheen
+		&& emissiveStrength == it.emissiveStrength && ior == it.ior; }
 };
 
 typedef ::Empty Mesh;
@@ -74,9 +78,10 @@ struct Node
 	AGI::NodeArticulation	AGI_articulations;
 	AGI::NodeArticulation	ANIM_articulations;
 	LF::RinTinTin			rintintin;
-			
-	bool empty() const { return AGI_articulations.empty() && rintintin.empty(); }
-	bool operator==(Node const& it) const { return AGI_articulations == it.AGI_articulations; }
+	bool					visible{true};
+
+	bool empty() const { return AGI_articulations.empty() && rintintin.empty() && visible; }
+	bool operator==(Node const& it) const { return AGI_articulations == it.AGI_articulations && visible == it.visible; }
 
 };
 

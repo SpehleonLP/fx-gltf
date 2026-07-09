@@ -202,12 +202,16 @@ void to_json(nlohmann::json & json, Node const& db)
 {
 	fx::gltf::detail::WriteField("AGI_articulations", json, db.AGI_articulations);
 	fx::gltf::detail::WriteField("LF_RINTINTIN",      json, db.rintintin);
+	if(!db.visible)
+		json["KHR_node_visibility"]["visible"] = false;
 }
 
 void from_json(const nlohmann::json & json, Node & db)
 {
 	fx::gltf::detail::ReadOptionalField("AGI_articulations", json, db.AGI_articulations);
 	fx::gltf::detail::ReadOptionalField("LF_RINTINTIN",      json, db.rintintin);
+	if(auto it = json.find("KHR_node_visibility"); it != json.end())
+		fx::gltf::detail::ReadOptionalField("visible", *it, db.visible);
 }
 
 void to_json(nlohmann::json & json, Texture const& extras)
@@ -229,6 +233,11 @@ void to_json(nlohmann::json & json, Material const& material)
 
 	fx::gltf::detail::WriteField("KHR_materials_clearcoat", json, material.clearcoat);
 	fx::gltf::detail::WriteField("KHR_materials_sheen", json, material.sheen);
+
+	if(material.emissiveStrength != 1.f)
+		json["KHR_materials_emissive_strength"]["emissiveStrength"] = material.emissiveStrength;
+	if(material.ior != 1.5f)
+		json["KHR_materials_ior"]["ior"] = material.ior;
 }
 
 void from_json(const nlohmann::json & json, Material & material)
@@ -238,6 +247,11 @@ void from_json(const nlohmann::json & json, Material & material)
 
 	fx::gltf::detail::ReadOptionalField("KHR_materials_clearcoat", json, material.clearcoat);
 	fx::gltf::detail::ReadOptionalField("KHR_materials_sheen", json, material.sheen);
+
+	if(auto it = json.find("KHR_materials_emissive_strength"); it != json.end())
+		fx::gltf::detail::ReadOptionalField("emissiveStrength", *it, material.emissiveStrength);
+	if(auto it = json.find("KHR_materials_ior"); it != json.end())
+		fx::gltf::detail::ReadOptionalField("ior", *it, material.ior);
 }
 
 }

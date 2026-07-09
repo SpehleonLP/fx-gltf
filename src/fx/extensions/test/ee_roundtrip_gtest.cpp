@@ -40,3 +40,19 @@ TEST(EeRoundTrip, MinimalFixtureLoads)
     fx::gltf::Document rt = SaveReloadText(doc);   // exercise the real serialize path
     EXPECT_EQ(rt.nodes.size(), 1u);
 }
+
+TEST(EeRoundTrip, MaterialScalarsAndVisibility)
+{
+    fx::gltf::Document doc = LoadFixture("mat_scalars.gltf");
+    fx::ExtensionsAndExtras ee; ee.Unpack(doc);
+    ASSERT_EQ(ee.materials.size(), 1u);
+    EXPECT_FLOAT_EQ(ee.materials[0].extensions.emissiveStrength, 4.0f);
+    EXPECT_FLOAT_EQ(ee.materials[0].extensions.ior, 1.4f);
+    ASSERT_EQ(ee.nodes.size(), 1u);
+    EXPECT_FALSE(ee.nodes[0].extensions.visible);
+    // repack → the blob keeps the values
+    ee.Pack(doc);
+    auto& mext = doc.materials[0].extensionsAndExtras["extensions"];
+    EXPECT_FLOAT_EQ(mext["KHR_materials_emissive_strength"]["emissiveStrength"].get<float>(), 4.0f);
+    EXPECT_FALSE(doc.nodes[0].extensionsAndExtras["extensions"]["KHR_node_visibility"]["visible"].get<bool>());
+}
