@@ -6,6 +6,7 @@
 #include "lf_rintintin.h"
 #include "lf_root_motion.h"
 #include <fx/gltf.h>
+#include <map>
 
 struct Empty
 {
@@ -81,8 +82,15 @@ struct Node
 	LF::RinTinTin			rintintin;
 	bool					visible{true};
 
-	bool empty() const { return AGI_articulations.empty() && rintintin.empty() && visible; }
-	bool operator==(Node const& it) const { return AGI_articulations == it.AGI_articulations && visible == it.visible; }
+	struct GpuInstancing
+	{
+		std::map<std::string,int32_t> attributes;
+		bool empty() const { return attributes.empty(); }
+		bool operator==(GpuInstancing const& it) const { return attributes == it.attributes; }
+	} gpuInstancing;
+
+	bool empty() const { return AGI_articulations.empty() && rintintin.empty() && visible && gpuInstancing.empty(); }
+	bool operator==(Node const& it) const { return AGI_articulations == it.AGI_articulations && visible == it.visible && gpuInstancing == it.gpuInstancing; }
 
 };
 

@@ -204,6 +204,13 @@ void to_json(nlohmann::json & json, Node const& db)
 	fx::gltf::detail::WriteField("LF_RINTINTIN",      json, db.rintintin);
 	if(!db.visible)
 		json["KHR_node_visibility"]["visible"] = false;
+
+	if(!db.gpuInstancing.empty())
+	{
+		nlohmann::json attrs;
+		for(auto const& kv : db.gpuInstancing.attributes) attrs[kv.first] = kv.second;
+		json["EXT_mesh_gpu_instancing"]["attributes"] = std::move(attrs);
+	}
 }
 
 void from_json(const nlohmann::json & json, Node & db)
@@ -212,6 +219,11 @@ void from_json(const nlohmann::json & json, Node & db)
 	fx::gltf::detail::ReadOptionalField("LF_RINTINTIN",      json, db.rintintin);
 	if(auto it = json.find("KHR_node_visibility"); it != json.end())
 		fx::gltf::detail::ReadOptionalField("visible", *it, db.visible);
+
+	if(auto it = json.find("EXT_mesh_gpu_instancing"); it != json.end())
+		if(auto a = it->find("attributes"); a != it->end() && a->is_object())
+			for(auto k = a->begin(); k != a->end(); ++k)
+				db.gpuInstancing.attributes[k.key()] = k->get<int32_t>();
 }
 
 void to_json(nlohmann::json & json, Texture const& extras)

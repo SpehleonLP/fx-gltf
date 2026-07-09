@@ -81,3 +81,17 @@ TEST(EeRoundTrip, MaterialSpecularTextures)
     EXPECT_EQ(j["specularTexture"]["index"].get<int>(), 0);
     EXPECT_EQ(j["specularColorTexture"]["index"].get<int>(), 1);
 }
+
+TEST(EeRoundTrip, NodeGpuInstancingAccessor)
+{
+    fx::gltf::Document doc = LoadFixture("instancing.gltf");
+    fx::ExtensionsAndExtras ee; ee.Unpack(doc);
+    ASSERT_EQ(ee.nodes.size(), 1u);
+    EXPECT_EQ(ee.nodes[0].extensions.gpuInstancing.attributes["TRANSLATION"], 0);
+
+    // repack → the blob keeps the values
+    ee.Pack(doc);
+    auto& next = doc.nodes[0].extensionsAndExtras["extensions"];
+    ASSERT_EQ(next.count("EXT_mesh_gpu_instancing"), 1u);
+    EXPECT_EQ(next["EXT_mesh_gpu_instancing"]["attributes"]["TRANSLATION"].get<int>(), 0);
+}
