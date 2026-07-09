@@ -77,6 +77,27 @@ struct Material
 
 typedef ::Empty Mesh;
 
+// KHR_materials_variants — per-primitive `mappings`. Note: the ee "Primitive"
+// scope is FLATTENED (mesh-major/primitive-minor) at Pack/Unpack time because
+// primitives are nested under meshes and have no doc-level array of their own.
+struct Primitive
+{
+	// One entry of the primitive's `mappings` array.
+	struct VariantMapping
+	{
+		int32_t              material{-1};	// index into the GC-compacted materials array
+		std::vector<int32_t> variants;		// indices into Document::variantNames (never compacted)
+
+		bool operator==(VariantMapping const& it) const {
+			return material == it.material && variants == it.variants; }
+	};
+
+	std::vector<VariantMapping> variantMappings;
+
+	bool empty() const { return variantMappings.empty(); }
+	bool operator==(Primitive const& it) const { return variantMappings == it.variantMappings; }
+};
+
 struct Node
 {
 	AGI::NodeArticulation	AGI_articulations;
@@ -134,10 +155,12 @@ struct Document
 	AGI::Articulations ANIM_articulations;
 
 	std::vector<PunctualLight> punctualLights;	// KHR_lights_punctual — doc-level array, never GC-compacted
+	std::vector<std::string>   variantNames;	// KHR_materials_variants — doc-level `variants` names, never GC-compacted
 
-	bool empty() const { return AGI_articulations.empty() && punctualLights.empty(); };
+	bool empty() const { return AGI_articulations.empty() && punctualLights.empty() && variantNames.empty(); };
 	bool operator==(Document const& it) const {
-		return AGI_articulations == it.AGI_articulations && punctualLights == it.punctualLights; }
+		return AGI_articulations == it.AGI_articulations && punctualLights == it.punctualLights
+			&& variantNames == it.variantNames; }
 };
 
 
@@ -145,6 +168,7 @@ void to_json(nlohmann::json & json, Animation const& db);
 void to_json(nlohmann::json & json, Image const& db);
 void to_json(nlohmann::json & json, Sampler const& db);
 void to_json(nlohmann::json & json, Document const& db);
+void to_json(nlohmann::json & json, Primitive const& db);
 void to_json(nlohmann::json & json, Node const& db);
 void to_json(nlohmann::json & json, Texture const& extras);
 void to_json(nlohmann::json & json, Material const& material);
@@ -153,6 +177,7 @@ void from_json(const nlohmann::json & json, Animation & db);
 void from_json(const nlohmann::json & json, Image & db);
 void from_json(const nlohmann::json & json, Sampler & db);
 void from_json(const nlohmann::json & json, Document & db);
+void from_json(const nlohmann::json & json, Primitive & db);
 void from_json(const nlohmann::json & json, Node & db);
 void from_json(const nlohmann::json & json, Texture & extras);
 void from_json(const nlohmann::json & json, Material & material);
@@ -257,6 +282,12 @@ struct ExtensionsAndExtras
 	EE_v(Scene)      scenes;
 	EE_v(Skin)       skins;
 	EE_v(Texture)    textures;
+
+	// FLATTENED primitive scope (KHR_materials_variants). Primitives are nested
+	// under meshes, so this vector is filled/consumed by a dedicated mesh-major/
+	// primitive-minor loop in Pack/Unpack (NOT the generic per-array machinery).
+	EE_t(Primitive)
+	std::vector<Pair<Extensions::Primitive, Extras::Primitive>> primitives;
 
 	EE_t(Document)
 	Document document;

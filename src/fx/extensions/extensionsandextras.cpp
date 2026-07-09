@@ -75,9 +75,29 @@ void fx::ExtensionsAndExtras::Pack(fx::gltf::Document & doc) const
 
 	fx::gltf::detail::WriteField("extensions", doc.extensionsAndExtras, document.extensions);
 	fx::gltf::detail::WriteField("extras", doc.extensionsAndExtras, document.extras);
-	
-//	doc.extensionsUsed.push_back("KHR_mesh_quantization"); 	
-//	doc.extensionsRequired.push_back("KHR_mesh_quantization"); 
+
+	// FLATTENED primitive scope (KHR_materials_variants). Primitives are nested
+	// (doc.meshes[m].primitives[p]) with no doc-level array, so we walk them with
+	// a running counter. INVARIANT: the flattened index is defined by MESH-MAJOR/
+	// PRIMITIVE-MINOR traversal; Unpack (below) walks the SAME order so index N
+	// refers to the same primitive on both sides (the same positional contract the
+	// generic per-array Pack/Unpack above already rely on). Never reorder either.
+	{
+		size_t counter = 0;
+		for(auto & m : doc.meshes)
+			for(auto & p : m.primitives)
+			{
+				if(counter < primitives.size())
+				{
+					fx::gltf::detail::WriteField("extensions", p.extensionsAndExtras, primitives[counter].extensions);
+					fx::gltf::detail::WriteField("extras", p.extensionsAndExtras, primitives[counter].extras);
+				}
+				++counter;
+			}
+	}
+
+//	doc.extensionsUsed.push_back("KHR_mesh_quantization");
+//	doc.extensionsRequired.push_back("KHR_mesh_quantization");
 }
 
 void fx::ExtensionsAndExtras::Unpack(fx::gltf::Document const& doc)
@@ -110,6 +130,36 @@ void fx::ExtensionsAndExtras::Unpack(fx::gltf::Document const& doc)
 
 	fx::gltf::detail::ReadOptionalField("extensions", doc.extensionsAndExtras, document.extensions);
 	fx::gltf::detail::ReadOptionalField("extras", doc.extensionsAndExtras, document.extras);
+
+	// FLATTENED primitive scope (KHR_materials_variants) — see the matching Pack
+	// loop for the indexing invariant. Count all primitives (mesh-major/primitive-
+	// minor); only allocate the flattened vector if some primitive blob is non-
+	// empty (mirrors the generic Unpack's lazy-resize). Pack rebuilds the IDENTICAL
+	// traversal, so flattened index N always denotes the same primitive.
+	{
+		size_t total = 0;
+		bool   any   = false;
+		for(auto const& m : doc.meshes)
+			for(auto const& p : m.primitives)
+			{
+				++total;
+				if(!p.extensionsAndExtras.empty())
+					any = true;
+			}
+
+		if(any && total)
+		{
+			primitives.resize(total);
+			size_t counter = 0;
+			for(auto const& m : doc.meshes)
+				for(auto const& p : m.primitives)
+				{
+					fx::gltf::detail::ReadOptionalField("extensions", p.extensionsAndExtras, primitives[counter].extensions);
+					fx::gltf::detail::ReadOptionalField("extras", p.extensionsAndExtras, primitives[counter].extras);
+					++counter;
+				}
+		}
+	}
 }
 
 namespace KHR
@@ -242,6 +292,19 @@ void to_json(nlohmann::json & json, Document const& db)
 		}
 		json["KHR_lights_punctual"]["lights"] = std::move(lights);
 	}
+
+	// KHR_materials_variants — doc-level `variants` names as [{ "name": ... }].
+	if(!db.variantNames.empty())
+	{
+		nlohmann::json variants = nlohmann::json::array();
+		for(auto const& name : db.variantNames)
+		{
+			nlohmann::json j;
+			j["name"] = name;
+			variants.push_back(std::move(j));
+		}
+		json["KHR_materials_variants"]["variants"] = std::move(variants);
+	}
 }
 
 void from_json(const nlohmann::json & json, Document & db)
@@ -258,6 +321,56 @@ void from_json(const nlohmann::json & json, Document & db)
 				PunctualLight light;
 				from_json(j, light);
 				db.punctualLights.push_back(std::move(light));
+			}
+		}
+	}
+
+	// KHR_materials_variants — doc-level `variants` names (index-stable).
+	if(auto it = json.find("KHR_materials_variants"); it != json.end())
+	{
+		if(auto v = it->find("variants"); v != it->end() && v->is_array())
+		{
+			db.variantNames.reserve(v->size());
+			for(auto const& j : *v)
+			{
+				std::string name;
+				fx::gltf::detail::ReadOptionalField("name", j, name);
+				db.variantNames.push_back(std::move(name));
+			}
+		}
+	}
+}
+
+// KHR_materials_variants — per-primitive `mappings` (material + variant indices).
+void to_json(nlohmann::json & json, Primitive const& db)
+{
+	if(db.variantMappings.empty())
+		return;
+
+	nlohmann::json mappings = nlohmann::json::array();
+	for(auto const& m : db.variantMappings)
+	{
+		nlohmann::json j;
+		j["material"] = m.material;
+		j["variants"] = m.variants;
+		mappings.push_back(std::move(j));
+	}
+	json["KHR_materials_variants"]["mappings"] = std::move(mappings);
+}
+
+void from_json(const nlohmann::json & json, Primitive & db)
+{
+	if(auto it = json.find("KHR_materials_variants"); it != json.end())
+	{
+		if(auto m = it->find("mappings"); m != it->end() && m->is_array())
+		{
+			db.variantMappings.reserve(m->size());
+			for(auto const& j : *m)
+			{
+				Primitive::VariantMapping vm;
+				fx::gltf::detail::ReadOptionalField("material", j, vm.material);
+				fx::gltf::detail::ReadOptionalField("variants", j, vm.variants);
+				db.variantMappings.push_back(std::move(vm));
 			}
 		}
 	}

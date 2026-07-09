@@ -133,3 +133,46 @@ TEST(EeRoundTrip, DocLevelLightsAndNodeLightIndex)
     EXPECT_EQ(doc.nodes[0].extensionsAndExtras["extensions"]["KHR_lights_punctual"]["light"].get<int>(), 0);
     EXPECT_EQ(doc.nodes[1].extensionsAndExtras["extensions"]["KHR_lights_punctual"]["light"].get<int>(), 1);
 }
+
+TEST(EeRoundTrip, MaterialsVariants)
+{
+    fx::gltf::Document doc = LoadFixture("variants.gltf");
+    fx::ExtensionsAndExtras ee; ee.Unpack(doc);
+
+    // Doc-level variant names (index-stable, never GC-compacted).
+    ASSERT_EQ(ee.document.extensions.variantNames.size(), 2u);
+    EXPECT_EQ(ee.document.extensions.variantNames[0], "wet");
+    EXPECT_EQ(ee.document.extensions.variantNames[1], "dry");
+
+    // The one mesh primitive flattens to index 0 (mesh-major/primitive-minor).
+    ASSERT_EQ(ee.primitives.size(), 1u);
+    auto& vm = ee.primitives[0].extensions.variantMappings;
+    ASSERT_EQ(vm.size(), 2u);
+    EXPECT_EQ(vm[0].material, 0);
+    ASSERT_EQ(vm[0].variants.size(), 1u);
+    EXPECT_EQ(vm[0].variants[0], 0);
+    EXPECT_EQ(vm[1].material, 1);
+    ASSERT_EQ(vm[1].variants.size(), 1u);
+    EXPECT_EQ(vm[1].variants[0], 1);
+
+    // repack → the blobs keep the values
+    ee.Pack(doc);
+    auto& dvar = doc.extensionsAndExtras["extensions"]["KHR_materials_variants"]["variants"];
+    ASSERT_EQ(dvar.size(), 2u);
+    EXPECT_EQ(dvar[0]["name"].get<std::string>(), "wet");
+    EXPECT_EQ(dvar[1]["name"].get<std::string>(), "dry");
+
+    auto& pmap = doc.meshes[0].primitives[0]
+        .extensionsAndExtras["extensions"]["KHR_materials_variants"]["mappings"];
+    ASSERT_EQ(pmap.size(), 2u);
+    EXPECT_EQ(pmap[1]["material"].get<int>(), 1);
+    EXPECT_EQ(pmap[1]["variants"][0].get<int>(), 1);
+
+    // Re-Unpack the just-Packed doc to prove the flatten invariant is a true
+    // round-trip (Pack and Unpack traverse mesh-major/primitive-minor identically).
+    fx::ExtensionsAndExtras ee2; ee2.Unpack(doc);
+    ASSERT_EQ(ee2.document.extensions.variantNames.size(), 2u);
+    ASSERT_EQ(ee2.primitives.size(), 1u);
+    ASSERT_EQ(ee2.primitives[0].extensions.variantMappings.size(), 2u);
+    EXPECT_EQ(ee2.primitives[0].extensions.variantMappings[1].material, 1);
+}
