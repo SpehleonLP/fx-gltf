@@ -6,7 +6,9 @@
 #include "lf_rintintin.h"
 #include "lf_root_motion.h"
 #include <fx/gltf.h>
+#include <array>
 #include <map>
+#include <vector>
 
 struct Empty
 {
@@ -81,6 +83,7 @@ struct Node
 	AGI::NodeArticulation	ANIM_articulations;
 	LF::RinTinTin			rintintin;
 	bool					visible{true};
+	int32_t					lightIndex{-1};	// KHR_lights_punctual: index into Document::punctualLights
 
 	struct GpuInstancing
 	{
@@ -89,8 +92,8 @@ struct Node
 		bool operator==(GpuInstancing const& it) const { return attributes == it.attributes; }
 	} gpuInstancing;
 
-	bool empty() const { return AGI_articulations.empty() && rintintin.empty() && visible && gpuInstancing.empty(); }
-	bool operator==(Node const& it) const { return AGI_articulations == it.AGI_articulations && visible == it.visible && gpuInstancing == it.gpuInstancing; }
+	bool empty() const { return AGI_articulations.empty() && rintintin.empty() && visible && gpuInstancing.empty() && lightIndex == -1; }
+	bool operator==(Node const& it) const { return AGI_articulations == it.AGI_articulations && visible == it.visible && gpuInstancing == it.gpuInstancing && lightIndex == it.lightIndex; }
 
 };
 
@@ -106,14 +109,35 @@ struct Texture
 	bool operator==(Texture const& it) const { return dds == it.dds; }
 };
 
+// KHR_lights_punctual — one entry of the doc-level `lights` array.
+struct PunctualLight
+{
+	std::string				type;					// "directional"|"point"|"spot"
+	std::array<float, 3>	color{1, 1, 1};
+	float					intensity{1.f};
+	float					range{0.f};				// 0 = infinite -> omit on write
+	std::string				name;
+	float					spotInner{0.f};
+	float					spotOuter{0.7853982f};	// pi/4
+	bool					isSpot{false};
+
+	bool operator==(PunctualLight const& it) const
+	{
+		return type == it.type && color == it.color && intensity == it.intensity && range == it.range
+			&& name == it.name && spotInner == it.spotInner && spotOuter == it.spotOuter && isSpot == it.isSpot;
+	}
+};
+
 struct Document
 {
 	AGI::Articulations AGI_articulations;
 	AGI::Articulations ANIM_articulations;
 
-	bool empty() const { return AGI_articulations.empty(); };
+	std::vector<PunctualLight> punctualLights;	// KHR_lights_punctual — doc-level array, never GC-compacted
+
+	bool empty() const { return AGI_articulations.empty() && punctualLights.empty(); };
 	bool operator==(Document const& it) const {
-		return AGI_articulations == it.AGI_articulations; }
+		return AGI_articulations == it.AGI_articulations && punctualLights == it.punctualLights; }
 };
 
 

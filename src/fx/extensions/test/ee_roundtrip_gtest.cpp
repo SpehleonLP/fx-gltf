@@ -95,3 +95,41 @@ TEST(EeRoundTrip, NodeGpuInstancingAccessor)
     ASSERT_EQ(next.count("EXT_mesh_gpu_instancing"), 1u);
     EXPECT_EQ(next["EXT_mesh_gpu_instancing"]["attributes"]["TRANSLATION"].get<int>(), 0);
 }
+
+TEST(EeRoundTrip, DocLevelLightsAndNodeLightIndex)
+{
+    fx::gltf::Document doc = LoadFixture("lights_punctual.gltf");
+    fx::ExtensionsAndExtras ee; ee.Unpack(doc);
+
+    ASSERT_EQ(ee.document.extensions.punctualLights.size(), 2u);
+
+    auto const& point = ee.document.extensions.punctualLights[0];
+    EXPECT_EQ(point.type, "point");
+    EXPECT_FALSE(point.isSpot);
+    EXPECT_FLOAT_EQ(point.color[0], 1.0f);
+    EXPECT_FLOAT_EQ(point.color[1], 0.5f);
+    EXPECT_FLOAT_EQ(point.color[2], 0.25f);
+    EXPECT_FLOAT_EQ(point.intensity, 10.0f);
+    EXPECT_EQ(point.name, "PointLight");
+
+    auto const& spot = ee.document.extensions.punctualLights[1];
+    EXPECT_EQ(spot.type, "spot");
+    EXPECT_TRUE(spot.isSpot);
+    EXPECT_FLOAT_EQ(spot.intensity, 5.0f);
+    EXPECT_FLOAT_EQ(spot.spotInner, 0.1f);
+    EXPECT_FLOAT_EQ(spot.spotOuter, 0.5f);
+
+    ASSERT_EQ(ee.nodes.size(), 2u);
+    EXPECT_EQ(ee.nodes[0].extensions.lightIndex, 0);
+    EXPECT_EQ(ee.nodes[1].extensions.lightIndex, 1);
+
+    // repack → the blob keeps the values
+    ee.Pack(doc);
+    auto& lights = doc.extensionsAndExtras["extensions"]["KHR_lights_punctual"]["lights"];
+    ASSERT_EQ(lights.size(), 2u);
+    EXPECT_EQ(lights[0]["type"].get<std::string>(), "point");
+    EXPECT_EQ(lights[1]["spot"]["innerConeAngle"].get<float>(), 0.1f);
+
+    EXPECT_EQ(doc.nodes[0].extensionsAndExtras["extensions"]["KHR_lights_punctual"]["light"].get<int>(), 0);
+    EXPECT_EQ(doc.nodes[1].extensionsAndExtras["extensions"]["KHR_lights_punctual"]["light"].get<int>(), 1);
+}

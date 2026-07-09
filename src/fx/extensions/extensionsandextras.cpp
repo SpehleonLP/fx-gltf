@@ -188,14 +188,79 @@ void from_json(const nlohmann::json & json, Sampler & db)
 }
 
 
+static void to_json(nlohmann::json & json, PunctualLight const& light)
+{
+	json["type"] = light.type;
+	json["intensity"] = light.intensity;
+
+	if(light.color != std::array<float, 3>{1, 1, 1})
+		fx::gltf::detail::WriteField("color", json, (std::array<float, 3>&)light.color);
+
+	if(light.range > 0.f)
+		json["range"] = light.range;
+
+	if(!light.name.empty())
+		json["name"] = light.name;
+
+	if(light.isSpot)
+	{
+		nlohmann::json spot;
+		spot["innerConeAngle"] = light.spotInner;
+		spot["outerConeAngle"] = light.spotOuter;
+		json["spot"] = std::move(spot);
+	}
+}
+
+static void from_json(const nlohmann::json & json, PunctualLight & light)
+{
+	fx::gltf::detail::ReadOptionalField("type", json, light.type);
+	fx::gltf::detail::ReadOptionalField("color", json, (std::array<float, 3>&)light.color);
+	fx::gltf::detail::ReadOptionalField("intensity", json, light.intensity);
+	fx::gltf::detail::ReadOptionalField("range", json, light.range);
+	fx::gltf::detail::ReadOptionalField("name", json, light.name);
+
+	if(auto it = json.find("spot"); it != json.end())
+	{
+		light.isSpot = true;
+		fx::gltf::detail::ReadOptionalField("innerConeAngle", *it, light.spotInner);
+		fx::gltf::detail::ReadOptionalField("outerConeAngle", *it, light.spotOuter);
+	}
+}
+
 void to_json(nlohmann::json & json, Document const& db)
 {
 	fx::gltf::detail::WriteField("AGI_articulations", json, db.AGI_articulations);
+
+	if(!db.punctualLights.empty())
+	{
+		nlohmann::json lights = nlohmann::json::array();
+		for(auto const& light : db.punctualLights)
+		{
+			nlohmann::json j;
+			to_json(j, light);
+			lights.push_back(std::move(j));
+		}
+		json["KHR_lights_punctual"]["lights"] = std::move(lights);
+	}
 }
 
 void from_json(const nlohmann::json & json, Document & db)
 {
 	fx::gltf::detail::ReadOptionalField("AGI_articulations", json, db.AGI_articulations);
+
+	if(auto it = json.find("KHR_lights_punctual"); it != json.end())
+	{
+		if(auto lights = it->find("lights"); lights != it->end() && lights->is_array())
+		{
+			db.punctualLights.reserve(lights->size());
+			for(auto const& j : *lights)
+			{
+				PunctualLight light;
+				from_json(j, light);
+				db.punctualLights.push_back(std::move(light));
+			}
+		}
+	}
 }
 
 void to_json(nlohmann::json & json, Node const& db)
@@ -211,6 +276,9 @@ void to_json(nlohmann::json & json, Node const& db)
 		for(auto const& kv : db.gpuInstancing.attributes) attrs[kv.first] = kv.second;
 		json["EXT_mesh_gpu_instancing"]["attributes"] = std::move(attrs);
 	}
+
+	if(db.lightIndex != -1)
+		json["KHR_lights_punctual"]["light"] = db.lightIndex;
 }
 
 void from_json(const nlohmann::json & json, Node & db)
@@ -224,6 +292,9 @@ void from_json(const nlohmann::json & json, Node & db)
 		if(auto a = it->find("attributes"); a != it->end() && a->is_object())
 			for(auto k = a->begin(); k != a->end(); ++k)
 				db.gpuInstancing.attributes[k.key()] = k->get<int32_t>();
+
+	if(auto it = json.find("KHR_lights_punctual"); it != json.end())
+		fx::gltf::detail::ReadOptionalField("light", *it, db.lightIndex);
 }
 
 void to_json(nlohmann::json & json, Texture const& extras)
