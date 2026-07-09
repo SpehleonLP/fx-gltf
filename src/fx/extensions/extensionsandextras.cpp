@@ -1,26 +1,26 @@
 #include "extensionsandextras.h"
 
-static const char * g_ExtensionsSupported[] =
+static const char * g_FamiliarExtensions[] =
 {
-	"LF_animRoot",
-	"LF_root_motion",
-	"LF_swizzle",
-	"LF_colliders",
-	"LF_compression",
-	"LF_alternate",
-	"MSFT_texture_dds",
-	"MSFT_packing_normalRoughnessMetallic",
-	"MSFT_packing_occlusionRoughnessMetallic",
-	"AGI_articulations",
-	"LF_RINTINTIN",
-	"KHR_materials_pbrSpecularGlossiness",
-	"KHR_materials_unlit",
-	"KHR_materials_sheen",
-	"KHR_materials_clearcoat",
-	"KHR_mesh_quantization",
-	"KHR_texture_transform",
+	// in-house / already handled (was g_ExtensionsSupported)
+	"LF_animRoot", "LF_root_motion", "LF_swizzle", "LF_colliders", "LF_compression",
+	"LF_alternate", "MSFT_texture_dds", "MSFT_packing_normalRoughnessMetallic",
+	"MSFT_packing_occlusionRoughnessMetallic", "AGI_articulations", "LF_RINTINTIN",
+	"KHR_materials_pbrSpecularGlossiness", "KHR_materials_unlit", "KHR_materials_sheen",
+	"KHR_materials_clearcoat", "KHR_mesh_quantization", "KHR_texture_transform",
+	// yes-list (this slice)
+	"KHR_materials_emissive_strength", "KHR_materials_ior", "KHR_node_visibility",
+	"KHR_materials_specular", "EXT_mesh_gpu_instancing", "KHR_lights_punctual",
+	"KHR_materials_variants", "MSFT_lod", "EXT_lights_image_based", "KHR_animation_pointer",
 	""
 };
+
+bool fx::IsFamiliarExtension(std::string_view name)
+{
+	for(const char** p = g_FamiliarExtensions; **p != '\0'; ++p)
+		if(name == *p) return true;
+	return false;
+}
 
 void to_json(nlohmann::json & , Empty const& ) {}
 void from_json(const nlohmann::json & , Empty & ) {}
@@ -84,18 +84,11 @@ void fx::ExtensionsAndExtras::Unpack(fx::gltf::Document const& doc)
 {
 	for(auto const& key : doc.extensionsRequired)
 	{
-		for(const char ** p = g_ExtensionsSupported; **p != '\0'; ++p)
-		{
-			if(key == *p)
-				goto found_extension;
-		}
+		if(fx::IsFamiliarExtension(key)) continue;
 
 		char buffer[256];
 		snprintf(buffer, sizeof(buffer), "unknown gltf extension: '%s' required", key.c_str());
 		throw std::runtime_error(buffer);
-
-found_extension:
-		(void)0;
 	}
 
 #define Pack_MACRO(x) ::Unpack(doc.x, x)

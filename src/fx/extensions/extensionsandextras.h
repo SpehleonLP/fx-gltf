@@ -184,6 +184,7 @@ typedef ::Empty Document;
 namespace fx
 {
 
+bool IsFamiliarExtension(std::string_view name);
 
 struct ExtensionsAndExtras
 {
