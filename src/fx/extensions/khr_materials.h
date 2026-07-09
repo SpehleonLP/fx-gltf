@@ -73,6 +73,27 @@ typedef fx::gltf::Material::NormalTexture NormalTexture;
 
 	void from_json(nlohmann::json const& json, sheen & material);
 	void to_json(nlohmann::json & json, sheen const& material);
+
+	// KHR_materials_specular — first index-bearing extension in the yes-list
+	// (task 4). factor/colorFactor scale the dielectric specular response;
+	// texture/colorTexture reference doc.textures like the core material
+	// texture slots. GC must mark+remap these like any other texture index.
+	struct specular
+	{
+		float                 factor{1.f};
+		std::array<float, 3>  colorFactor{1.f, 1.f, 1.f};
+		Texture               texture;
+		Texture               colorTexture;
+
+		bool                  is_empty{true};
+
+		bool empty() const noexcept { return is_empty; }
+
+		bool operator==(const KHR::materials::specular & b) const;
+	};
+
+	void from_json(nlohmann::json const& json, specular & material);
+	void to_json(nlohmann::json & json, specular const& material);
 }
 
 namespace Texture

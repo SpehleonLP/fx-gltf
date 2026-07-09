@@ -233,6 +233,7 @@ void to_json(nlohmann::json & json, Material const& material)
 
 	fx::gltf::detail::WriteField("KHR_materials_clearcoat", json, material.clearcoat);
 	fx::gltf::detail::WriteField("KHR_materials_sheen", json, material.sheen);
+	fx::gltf::detail::WriteField("KHR_materials_specular", json, material.specular);
 
 	if(material.emissiveStrength != 1.f)
 		json["KHR_materials_emissive_strength"]["emissiveStrength"] = material.emissiveStrength;
@@ -247,6 +248,7 @@ void from_json(const nlohmann::json & json, Material & material)
 
 	fx::gltf::detail::ReadOptionalField("KHR_materials_clearcoat", json, material.clearcoat);
 	fx::gltf::detail::ReadOptionalField("KHR_materials_sheen", json, material.sheen);
+	fx::gltf::detail::ReadOptionalField("KHR_materials_specular", json, material.specular);
 
 	if(auto it = json.find("KHR_materials_emissive_strength"); it != json.end())
 		fx::gltf::detail::ReadOptionalField("emissiveStrength", *it, material.emissiveStrength);

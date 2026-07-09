@@ -59,15 +59,16 @@ struct Material
 	KHR::materials::pbrSpecularGlossiness pbrSpecularGlossiness;
 	KHR::materials::clearcoat			  clearcoat;
 	KHR::materials::sheen				  sheen;
+	KHR::materials::specular			  specular;
 
 	KHR::materials::unlit unlit;
 
 	float emissiveStrength{1.f};
 	float ior{1.5f};
 
-	bool empty() const { return pbrSpecularGlossiness.empty() && unlit.empty() && clearcoat.empty() && sheen.empty()
+	bool empty() const { return pbrSpecularGlossiness.empty() && unlit.empty() && clearcoat.empty() && sheen.empty() && specular.empty()
 		&& emissiveStrength == 1.f && ior == 1.5f; }
-	bool operator==(Material const& it) const { return pbrSpecularGlossiness == it.pbrSpecularGlossiness && unlit == it.unlit && clearcoat == it.clearcoat && sheen == it.sheen
+	bool operator==(Material const& it) const { return pbrSpecularGlossiness == it.pbrSpecularGlossiness && unlit == it.unlit && clearcoat == it.clearcoat && sheen == it.sheen && specular == it.specular
 		&& emissiveStrength == it.emissiveStrength && ior == it.ior; }
 };
 
