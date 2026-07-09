@@ -12384,7 +12384,7 @@ class basic_json
 
     @since version 3.2.0
     */
-    template <typename BasicJsonType,
+	template <typename BasicJsonType,
               detail::enable_if_t<
                   detail::is_basic_json<BasicJsonType>::value and not std::is_same<basic_json, BasicJsonType>::value, int> = 0>
     basic_json(const BasicJsonType& val)
@@ -17374,7 +17374,7 @@ class basic_json
     }
 
 
-  private:
+  public:
     //////////////////////
     // member variables //
     //////////////////////
