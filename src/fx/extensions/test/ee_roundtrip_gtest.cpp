@@ -312,3 +312,40 @@ TEST(EeRoundTrip, DocLevelIblLightAndSceneIndex)
     ASSERT_EQ(ee2.scenes.size(), 1u);
     EXPECT_EQ(ee2.scenes[0].extensions.iblLightIndex, 0);
 }
+
+// anim_pointer.gltf: an animation channel whose target carries
+// KHR_animation_pointer.pointer = "/materials/0/emissiveFactor" (task 10). The
+// pointer lives on channel.target.extensions — outside the ee-macro reach — and
+// the fork preserves target.extensionsAndExtras verbatim on Load/Save, so the
+// string must survive a full round-trip with NO typed accessor and NO new
+// (de)serialization code. Fixture is buffer-less but NOT mesh-bearing, so
+// SaveReloadText is safe here.
+TEST(EeRoundTrip, AnimationPointerTargetString)
+{
+    fx::gltf::Document doc = LoadFixture("anim_pointer.gltf");
+    ASSERT_EQ(doc.animations.size(), 1u);
+    ASSERT_EQ(doc.animations[0].channels.size(), 1u);
+
+    auto ReadPointer = [](fx::gltf::Document const& d) -> std::string {
+        auto const& tee = d.animations[0].channels[0].target.extensionsAndExtras;
+        auto ext = tee.find("extensions");
+        if(ext == tee.end()) return {};
+        auto ap = ext->find("KHR_animation_pointer");
+        if(ap == ext->end()) return {};
+        auto p = ap->find("pointer");
+        if(p == ap->end() || !p->is_string()) return {};
+        return p->get<std::string>();
+    };
+
+    // Load preserves the target-scope blob.
+    EXPECT_EQ(ReadPointer(doc), "/materials/0/emissiveFactor");
+
+    // ee Unpack->Pack leaves the bespoke target scope untouched (buffer-less safe).
+    fx::ExtensionsAndExtras ee; ee.Unpack(doc); ee.Pack(doc);
+    EXPECT_EQ(ReadPointer(doc), "/materials/0/emissiveFactor");
+
+    // Full serialize round-trip through text also preserves it (fixture is not
+    // mesh-bearing, so SaveReloadText does not throw).
+    fx::gltf::Document rt = SaveReloadText(doc);
+    EXPECT_EQ(ReadPointer(rt), "/materials/0/emissiveFactor");
+}
