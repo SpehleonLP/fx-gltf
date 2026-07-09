@@ -288,14 +288,14 @@ static void to_json(nlohmann::json & json, IblLight const& light)
 		json["name"] = light.name;
 
 	if(light.rotation != std::array<float, 4>{0, 0, 0, 1})
-		json["rotation"] = (std::array<float, 4> const&)light.rotation;
+		json["rotation"] = light.rotation;   // m4: field is already std::array<float,4>
 
 	if(light.intensity != 1.f)
 		json["intensity"] = light.intensity;
 
 	nlohmann::json sh = nlohmann::json::array();
 	for(auto const& c : light.irradianceCoefficients)
-		sh.push_back((std::array<float, 3> const&)c);
+		sh.push_back(c);   // m4: c is already std::array<float,3>
 	json["irradianceCoefficients"] = std::move(sh);
 
 	nlohmann::json mips = nlohmann::json::array();
@@ -309,13 +309,13 @@ static void to_json(nlohmann::json & json, IblLight const& light)
 static void from_json(const nlohmann::json & json, IblLight & light)
 {
 	fx::gltf::detail::ReadOptionalField("name", json, light.name);
-	fx::gltf::detail::ReadOptionalField("rotation", json, (std::array<float, 4>&)light.rotation);
+	fx::gltf::detail::ReadOptionalField("rotation", json, light.rotation);   // m4: already std::array<float,4>
 	fx::gltf::detail::ReadOptionalField("intensity", json, light.intensity);
 	fx::gltf::detail::ReadOptionalField("specularImageSize", json, light.specularImageSize);
 
 	if(auto it = json.find("irradianceCoefficients"); it != json.end() && it->is_array())
 		for(size_t i = 0; i < light.irradianceCoefficients.size() && i < it->size(); ++i)
-			(std::array<float, 3>&)light.irradianceCoefficients[i] = (*it)[i].get<std::array<float, 3>>();
+			light.irradianceCoefficients[i] = (*it)[i].get<std::array<float, 3>>();   // m4
 
 	if(auto it = json.find("specularImages"); it != json.end() && it->is_array())
 	{
@@ -435,7 +435,11 @@ void to_json(nlohmann::json & json, Primitive const& db)
 	for(auto const& m : db.variantMappings)
 	{
 		nlohmann::json j;
-		j["material"] = m.material;
+		// Emit `material` only when meaningful (>= 0). A default-constructed
+		// VariantMapping carries material{-1}; writing the sentinel would emit an
+		// invalid negative index (byte-faithful "emit only meaningful" rule). m1.
+		if(m.material >= 0)
+			j["material"] = m.material;
 		j["variants"] = m.variants;
 		mappings.push_back(std::move(j));
 	}

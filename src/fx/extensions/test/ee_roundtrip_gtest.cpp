@@ -177,6 +177,56 @@ TEST(EeRoundTrip, MaterialsVariants)
     EXPECT_EQ(ee2.primitives[0].extensions.variantMappings[1].material, 1);
 }
 
+// variants_multiprim.gltf — retires the m2 coverage gap. The earlier
+// MaterialsVariants test had a single mesh / single primitive, so the ee
+// mesh-major/primitive-minor flatten counter only ever ran at index 0. Here two
+// meshes span three primitives: mesh0 has [p0 (no variants), p1 (variants)] and
+// mesh1 has [p0 (variants)]. So variant mappings land at FLATTEN INDICES 1 and 2
+// (counter > 0), proving the flatten traversal — and its Pack/Unpack round-trip
+// invariant — holds past the first primitive of the first mesh.
+TEST(EeRoundTrip, MaterialsVariantsMultiPrimitiveFlatten)
+{
+    fx::gltf::Document doc = LoadFixture("variants_multiprim.gltf");
+    fx::ExtensionsAndExtras ee; ee.Unpack(doc);
+
+    // All three primitives flatten (mesh-major/primitive-minor): 0,1,2.
+    ASSERT_EQ(ee.primitives.size(), 3u);
+    // Flatten index 0 = mesh0.p0 — no variants.
+    EXPECT_TRUE(ee.primitives[0].extensions.variantMappings.empty());
+    // Flatten index 1 = mesh0.p1 — variants at counter > 0.
+    ASSERT_EQ(ee.primitives[1].extensions.variantMappings.size(), 1u);
+    EXPECT_EQ(ee.primitives[1].extensions.variantMappings[0].material, 1);
+    ASSERT_EQ(ee.primitives[1].extensions.variantMappings[0].variants.size(), 1u);
+    EXPECT_EQ(ee.primitives[1].extensions.variantMappings[0].variants[0], 0);
+    // Flatten index 2 = mesh1.p0 — variants at counter > 0 (second mesh).
+    ASSERT_EQ(ee.primitives[2].extensions.variantMappings.size(), 1u);
+    EXPECT_EQ(ee.primitives[2].extensions.variantMappings[0].material, 2);
+    EXPECT_EQ(ee.primitives[2].extensions.variantMappings[0].variants[0], 1);
+
+    // Pack rebuilds the identical traversal — each mapping lands back on the same
+    // primitive (index N denotes the same primitive on both sides).
+    ee.Pack(doc);
+    EXPECT_EQ(doc.meshes[0].primitives[0].extensionsAndExtras.count("extensions"), 0u)
+        << "no-variant primitive gained a variants blob — flatten misaligned";
+    auto& m0p1 = doc.meshes[0].primitives[1]
+        .extensionsAndExtras["extensions"]["KHR_materials_variants"]["mappings"];
+    ASSERT_EQ(m0p1.size(), 1u);
+    EXPECT_EQ(m0p1[0]["material"].get<int>(), 1);
+    auto& m1p0 = doc.meshes[1].primitives[0]
+        .extensionsAndExtras["extensions"]["KHR_materials_variants"]["mappings"];
+    ASSERT_EQ(m1p0.size(), 1u);
+    EXPECT_EQ(m1p0[0]["material"].get<int>(), 2);
+
+    // Re-Unpack proves the round-trip is stable at counter > 0.
+    fx::ExtensionsAndExtras ee2; ee2.Unpack(doc);
+    ASSERT_EQ(ee2.primitives.size(), 3u);
+    EXPECT_TRUE(ee2.primitives[0].extensions.variantMappings.empty());
+    ASSERT_EQ(ee2.primitives[1].extensions.variantMappings.size(), 1u);
+    EXPECT_EQ(ee2.primitives[1].extensions.variantMappings[0].material, 1);
+    ASSERT_EQ(ee2.primitives[2].extensions.variantMappings.size(), 1u);
+    EXPECT_EQ(ee2.primitives[2].extensions.variantMappings[0].material, 2);
+}
+
 // msft_lod.gltf: node 0 ("lod0") carries MSFT_lod.ids=[1] (extension scope) and
 // extras.MSFT_screencoverage=[0.5,0.01]; node 1 ("lod1") is the standalone lower
 // LOD. Round-trips the typed ee fields and asserts the re-packed JSON blob.
