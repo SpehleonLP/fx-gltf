@@ -4,6 +4,7 @@
 #include <string>
 #include <vector>
 #include <array>
+#include <nlohmann/json.hpp>
 
 namespace AGI
 {
@@ -43,6 +44,18 @@ struct Articulations
 		{
 		typedef StageParameters::StageType StageType;
 			std::string name;
+			// AGI_articulations' schema (articulation.stage.schema.json) only
+			// defines name/type/minimumValue/maximumValue/initialValue plus the
+			// standard extensions/extras hooks -- maximumVelocity and
+			// maximumEffort above are this codebase's own (non-standard)
+			// invention, not part of the spec. extensionsAndExtras is the
+			// sanctioned extension point for anything else a producer wants to
+			// attach (e.g. tonton-example/gltfRepackager's
+			// extras.chachaMaximumSpeed / extras.chachaMaximumAcceleration).
+			// Same pattern as fx::gltf's own types (see gltf.h); read/written
+			// via fx::gltf::detail::ReadExtensionsAndExtras/WriteExtensions in
+			// agi_articulation.cpp's to_json/from_json.
+			nlohmann::json extensionsAndExtras{};
 
 			bool empty() const { return false; }
 			bool operator==(Stage const& it) const

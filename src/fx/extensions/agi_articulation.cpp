@@ -61,6 +61,7 @@ inline void from_json(const nlohmann::json & json,  Articulations::Articulation:
 	READ(maximumVelocity);
 	READ(initialValue);
 	READ(type);
+	fx::gltf::detail::ReadExtensionsAndExtras(json, obj.extensionsAndExtras);
 }
 
 inline void to_json(nlohmann::json & json, Articulations::Articulation::Stage const& obj)
@@ -72,6 +73,7 @@ inline void to_json(nlohmann::json & json, Articulations::Articulation::Stage co
 	json["initialValue"] = obj.initialValue;
 	json["maximumEffort"] = obj.maximumEffort;
 	json["maximumVelocity"] = obj.maximumVelocity;
+	fx::gltf::detail::WriteExtensions(json, obj.extensionsAndExtras);
 }
 
 inline void from_json(const nlohmann::json & json,  Articulations::Articulation & obj)
