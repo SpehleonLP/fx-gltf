@@ -36,8 +36,15 @@ struct Articulations
 			float minimumValue{0};
 			float maximumValue{0};
 			float initialValue{0};
-			float maximumVelocity{1.f};
-			float maximumEffort{1.f};
+			// Named for what they actually are (ChaCha's measurements),
+			// not glTF/AGI schema properties -- there are none by these
+			// names or any names in the stage schema. Serialized through
+			// extras.chachaMaximumSpeed/chachaMaximumAcceleration by
+			// Stage's to_json/from_json in agi_articulation.cpp; these
+			// members are never read from or written to a top-level JSON
+			// key. See that file for the extras merge/precedence rule.
+			float maximumSpeed{1.f};
+			float maximumAcceleration{1.f};
 		};
 		
 		struct Stage : public StageParameters
@@ -46,14 +53,14 @@ struct Articulations
 			std::string name;
 			// AGI_articulations' schema (articulation.stage.schema.json) only
 			// defines name/type/minimumValue/maximumValue/initialValue plus the
-			// standard extensions/extras hooks -- maximumVelocity and
-			// maximumEffort above are this codebase's own (non-standard)
-			// invention, not part of the spec. extensionsAndExtras is the
-			// sanctioned extension point for anything else a producer wants to
-			// attach (e.g. tonton-example/gltfRepackager's
-			// extras.chachaMaximumSpeed / extras.chachaMaximumAcceleration).
-			// Same pattern as fx::gltf's own types (see gltf.h); read/written
-			// via fx::gltf::detail::ReadExtensionsAndExtras/WriteExtensions in
+			// standard extensions/extras hooks. extensionsAndExtras is the
+			// sanctioned extension point for anything a producer wants to
+			// attach beyond that -- maximumSpeed/maximumAcceleration above
+			// are serialized through it (extras.chachaMaximumSpeed /
+			// extras.chachaMaximumAcceleration) rather than as top-level
+			// properties, since they aren't part of the spec either. Same
+			// pattern as fx::gltf's own types (see gltf.h); read/written via
+			// fx::gltf::detail::ReadExtensionsAndExtras/WriteExtensions in
 			// agi_articulation.cpp's to_json/from_json.
 			nlohmann::json extensionsAndExtras{};
 

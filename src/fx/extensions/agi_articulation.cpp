@@ -57,11 +57,28 @@ inline void from_json(const nlohmann::json & json,  Articulations::Articulation:
 	READ(name);
 	READ(minimumValue);
 	READ(maximumValue);
-	READ(maximumEffort);
-	READ(maximumVelocity);
 	READ(initialValue);
 	READ(type);
 	fx::gltf::detail::ReadExtensionsAndExtras(json, obj.extensionsAndExtras);
+
+	// maximumSpeed/maximumAcceleration are NOT top-level Stage properties --
+	// they live in extras.chachaMaximumSpeed/chachaMaximumAcceleration (see
+	// to_json below), so pull them back out of the extras blob
+	// ReadExtensionsAndExtras just captured, rather than READ()ing a
+	// top-level key. Deliberately NO fallback to the legacy top-level
+	// "maximumVelocity"/"maximumEffort" keys this struct used to serialize:
+	// the user explicitly ruled out backward compatibility here. A file
+	// written by an older fx-gltf that still has those top-level keys loses
+	// those values on reload -- both members fall back to their 1.f default.
+	obj.maximumSpeed = 1.f;
+	obj.maximumAcceleration = 1.f;
+	if (auto extras_it = obj.extensionsAndExtras.find("extras"); extras_it != obj.extensionsAndExtras.end())
+	{
+		if (auto it = extras_it->find("chachaMaximumSpeed"); it != extras_it->end())
+			obj.maximumSpeed = it->get<float>();
+		if (auto it = extras_it->find("chachaMaximumAcceleration"); it != extras_it->end())
+			obj.maximumAcceleration = it->get<float>();
+	}
 }
 
 inline void to_json(nlohmann::json & json, Articulations::Articulation::Stage const& obj)
@@ -71,18 +88,25 @@ inline void to_json(nlohmann::json & json, Articulations::Articulation::Stage co
 	json["minimumValue"] = obj.minimumValue;
 	json["maximumValue"] = obj.maximumValue;
 	json["initialValue"] = obj.initialValue;
-	// maximumEffort/maximumVelocity are this struct's own non-standard
-	// addition -- the AGI_articulations stage schema only defines name/type/
-	// minimumValue/maximumValue/initialValue plus the standard extensions/
-	// extras hooks. Writing them unconditionally stamped a meaningless 1.0
-	// onto every stage any producer emits through this struct. Only write
-	// them when they differ from their 1.0f default; from_json already
-	// defaults both to 1.0f, so omitting them round-trips exactly.
-	if (obj.maximumEffort != 1.f)
-		json["maximumEffort"] = obj.maximumEffort;
-	if (obj.maximumVelocity != 1.f)
-		json["maximumVelocity"] = obj.maximumVelocity;
+
+	// Write the caller's extensionsAndExtras FIRST (this replaces
+	// json["extras"]/json["extensions"] wholesale with whatever the caller
+	// set by hand -- see WriteExtensions), then merge chacha's own extras
+	// keys in on top of that. Precedence, made explicit and deterministic:
+	// the typed maximumSpeed/maximumAcceleration members are the struct's
+	// source of truth and always win over a hand-authored
+	// extras.chachaMaximumSpeed/chachaMaximumAcceleration set to a
+	// different value under the same key -- they overwrite it rather than
+	// silently losing to it or duplicating the key. Anything else the
+	// caller put in extras (any other key) is preserved untouched, since
+	// only these two specific keys are ever assigned here. Only written
+	// when they differ from the 1.f default, so a stage nobody set these on
+	// doesn't gain a meaningless extras entry, and round-trips exactly.
 	fx::gltf::detail::WriteExtensions(json, obj.extensionsAndExtras);
+	if (obj.maximumSpeed != 1.f)
+		json["extras"]["chachaMaximumSpeed"] = obj.maximumSpeed;
+	if (obj.maximumAcceleration != 1.f)
+		json["extras"]["chachaMaximumAcceleration"] = obj.maximumAcceleration;
 }
 
 inline void from_json(const nlohmann::json & json,  Articulations::Articulation & obj)
