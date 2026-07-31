@@ -71,8 +71,17 @@ inline void to_json(nlohmann::json & json, Articulations::Articulation::Stage co
 	json["minimumValue"] = obj.minimumValue;
 	json["maximumValue"] = obj.maximumValue;
 	json["initialValue"] = obj.initialValue;
-	json["maximumEffort"] = obj.maximumEffort;
-	json["maximumVelocity"] = obj.maximumVelocity;
+	// maximumEffort/maximumVelocity are this struct's own non-standard
+	// addition -- the AGI_articulations stage schema only defines name/type/
+	// minimumValue/maximumValue/initialValue plus the standard extensions/
+	// extras hooks. Writing them unconditionally stamped a meaningless 1.0
+	// onto every stage any producer emits through this struct. Only write
+	// them when they differ from their 1.0f default; from_json already
+	// defaults both to 1.0f, so omitting them round-trips exactly.
+	if (obj.maximumEffort != 1.f)
+		json["maximumEffort"] = obj.maximumEffort;
+	if (obj.maximumVelocity != 1.f)
+		json["maximumVelocity"] = obj.maximumVelocity;
 	fx::gltf::detail::WriteExtensions(json, obj.extensionsAndExtras);
 }
 
