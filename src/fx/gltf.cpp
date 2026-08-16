@@ -1406,15 +1406,25 @@ namespace gltf
         {
             detail::GLBHeader header;
             std::memcpy(&header, &binary[0], detail::HeaderSize);
-            if (header.magic != detail::GLBHeaderMagic ||
+
+            bool const isCbor = (header.magic == detail::GLBHeaderMagicCBOR);
+            if ((!isCbor && header.magic != detail::GLBHeaderMagic) ||
                 header.jsonHeader.chunkType != detail::GLBChunkJSON ||
                 header.jsonHeader.chunkLength + detail::HeaderSize > header.length)
             {
                 throw invalid_gltf_document("Invalid GLB header");
             }
 
+            // Only the structural decode differs; BIN framing (DataContext.binaryOffset
+            // below) is identical for both, since chunkLength is the structural chunk's
+            // byte count either way.
+            nlohmann::json structural = isCbor
+                ? nlohmann::json::from_cbor(binary.begin() + detail::HeaderSize,
+                                            binary.begin() + detail::HeaderSize + header.jsonHeader.chunkLength)
+                : nlohmann::json::parse({ &binary[detail::HeaderSize], header.jsonHeader.chunkLength });
+
             auto doc = detail::Create(
-                nlohmann::json::parse({ &binary[detail::HeaderSize], header.jsonHeader.chunkLength }),
+                std::move(structural),
                 { detail::GetDocumentRootPath(documentFilePath), readQuotas, binary, header.jsonHeader.chunkLength + detail::HeaderSize },
 				skip_buffers);
 
@@ -1558,41 +1568,55 @@ namespace gltf
         }		
 	}
 	
-	std::optional<JsonError> Save(Document const & document, std::ostream & output, std::string const & documentRootPath, bool useBinaryFormat)
+	std::optional<JsonError> Save(Document const & document, std::ostream & output, std::string const & documentRootPath, bool useBinaryFormat, bool useCbor)
 	{
 		try
 		{
 			// There is no way to check if an ostream has been opened in binary mode or not. Just checking
 			// if it's "good" is the best we can do from here...
 			nlohmann::json json = document;
-			
+
 			std::size_t externalBufferIndex = 0;
 			if (useBinaryFormat)
 			{
-				detail::GLBHeader header{ detail::GLBHeaderMagic, 2, 0, { 0, detail::GLBChunkJSON } };
+				detail::GLBHeader header{ useCbor ? detail::GLBHeaderMagicCBOR : detail::GLBHeaderMagic,
+										  2, 0, { 0, detail::GLBChunkJSON } };
 				detail::ChunkHeader binHeader{ 0, detail::GLBChunkBIN };
-				
-				std::string jsonText = json.dump();
-				
+
+				// Structural chunk: CBOR bytes or JSON text.
+				std::vector<uint8_t> cborBytes;
+				std::string          jsonText;
+				uint32_t             structuralLen;
+				if (useCbor) { cborBytes = nlohmann::json::to_cbor(json); structuralLen = static_cast<uint32_t>(cborBytes.size()); }
+				else         { jsonText  = json.dump();                    structuralLen = static_cast<uint32_t>(jsonText.length()); }
+
 				Buffer const & binBuffer = document.buffers.front();
 				const uint32_t binPaddedLength = ((binBuffer.byteLength + 3) & (~3u));
 				const uint32_t binPadding = binPaddedLength - binBuffer.byteLength;
 				binHeader.chunkLength = binPaddedLength;
-				
-				header.jsonHeader.chunkLength = ((jsonText.length() + 3) & (~3u));
-				const uint32_t headerPadding = static_cast<uint32_t>(header.jsonHeader.chunkLength - jsonText.length());
+
+				header.jsonHeader.chunkLength = ((structuralLen + 3) & (~3u));
+				const uint32_t headerPadding = header.jsonHeader.chunkLength - structuralLen;
 				header.length = detail::HeaderSize + header.jsonHeader.chunkLength + detail::ChunkHeaderSize + binHeader.chunkLength;
-				
+
 				constexpr std::array<char, 3> spaces = { ' ', ' ', ' ' };
 				constexpr std::array<char, 3> nulls = { 0, 0, 0 };
-				
+
 				output.write(reinterpret_cast<char *>(&header), detail::HeaderSize);
-				output.write(jsonText.c_str(), jsonText.length());
-				output.write(&spaces[0], headerPadding);
+				if (useCbor)
+				{
+					output.write(reinterpret_cast<char const *>(cborBytes.data()), structuralLen);
+					output.write(&nulls[0], headerPadding);   // pad CBOR with zeros, never spaces
+				}
+				else
+				{
+					output.write(jsonText.c_str(), structuralLen);
+					output.write(&spaces[0], headerPadding);  // JSON pads with spaces (valid whitespace)
+				}
 				output.write(reinterpret_cast<char *>(&binHeader), detail::ChunkHeaderSize);
 				output.write(reinterpret_cast<char const *>(&binBuffer.data[0]), binBuffer.byteLength);
 				output.write(&nulls[0], binPadding);
-				
+
 				externalBufferIndex = 1;
 			}
 			else

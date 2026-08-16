@@ -96,6 +96,11 @@ namespace gltf
         constexpr std::size_t HeaderSize{ sizeof(GLBHeader) };
         constexpr std::size_t ChunkHeaderSize{ sizeof(ChunkHeader) };
         constexpr uint32_t GLBHeaderMagic = 0x46546c67u;
+        // Our lf_glb CBOR variant. Same GLB header + BIN framing as a standard GLB;
+        // only the file magic differs, so the loader distinguishes the two by the
+        // first 4 bytes and decodes the structural chunk as CBOR instead of JSON.
+        // Little-endian target: this u32 equals the bytes 'C','B','O','R' in file order.
+        constexpr uint32_t GLBHeaderMagicCBOR = 0x524f4243u;
         constexpr uint32_t GLBChunkJSON = 0x4e4f534au;
         constexpr uint32_t GLBChunkBIN = 0x004e4942u;
 
@@ -750,7 +755,7 @@ namespace gltf
     tl::expected<Document, JsonError> LoadFromBinary(std::string const& documentFilePath, bool skip_buffers = false, ReadQuotas const& readQuotas = {});
 	tl::expected<Document, JsonError> LoadFromBinary(std::vector<uint8_t> binary, std::string const& documentFilePath, bool skip_buffers = false, ReadQuotas const& readQuotas = {});
 
-	[[nodiscard]] std::optional<JsonError> Save(Document const & document, std::ostream & output, const std::string &documentRootPath, bool useBinaryFormat);
+	[[nodiscard]] std::optional<JsonError> Save(Document const & document, std::ostream & output, const std::string &documentRootPath, bool useBinaryFormat, bool useCbor = false);
     [[nodiscard]] std::optional<JsonError> Save(Document const& document, std::string documentFilePath, bool useBinaryFormat);	
 	
 
@@ -764,6 +769,7 @@ namespace gltf
 	void to_json(nlohmann::json & json, Image const& buffer);
 	void to_json(nlohmann::json & json, Buffer const& buffer);
 	void to_json(nlohmann::json & json, BufferView const& buffer);
+	void to_json(nlohmann::json & json, Document const& document);
 
 } // namespace gltf
 
