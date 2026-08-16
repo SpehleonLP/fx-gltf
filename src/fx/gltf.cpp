@@ -1657,19 +1657,34 @@ namespace gltf
 	}
 	
 #ifdef GLTF_SAVE
-    std::optional<JsonError> Save(Document const& document, std::string documentFilePath, bool useBinaryFormat)
+    std::optional<JsonError> Save(Document const& document, std::string documentFilePath, bool useBinaryFormat, bool useCbor)
     {
         try
         {
             detail::ValidateBuffers(document.buffers, useBinaryFormat);
 
-            detail::Save(document, documentFilePath, useBinaryFormat);
+            // CBOR framing is only implemented by the ostream Save overload below;
+            // route through it (instead of the legacy detail::Save path) so useCbor
+            // actually takes effect.
+            std::ofstream file(documentFilePath, useBinaryFormat ? std::ios::binary : std::ios::out);
+            if (!file.is_open())
+            {
+                throw std::system_error(std::make_error_code(std::errc::io_error));
+            }
+
+            std::string documentRootPath = detail::GetDocumentRootPath(documentFilePath);
+            auto err = Save(document, file, documentRootPath, useBinaryFormat, useCbor);
+            file.flush();
+            if (err)
+            {
+                return err;
+            }
             return {};
         }
         catch (std::exception & e)
         {
 			return JsonError{.file=documentFilePath,.what=e.what()};
-        }		
+        }
     }
 #endif
 } // namespace gltf

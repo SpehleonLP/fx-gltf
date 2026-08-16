@@ -756,7 +756,7 @@ namespace gltf
 	tl::expected<Document, JsonError> LoadFromBinary(std::vector<uint8_t> binary, std::string const& documentFilePath, bool skip_buffers = false, ReadQuotas const& readQuotas = {});
 
 	[[nodiscard]] std::optional<JsonError> Save(Document const & document, std::ostream & output, const std::string &documentRootPath, bool useBinaryFormat, bool useCbor = false);
-    [[nodiscard]] std::optional<JsonError> Save(Document const& document, std::string documentFilePath, bool useBinaryFormat);	
+    [[nodiscard]] std::optional<JsonError> Save(Document const& document, std::string documentFilePath, bool useBinaryFormat, bool useCbor = false);
 	
 
 	[[nodiscard]] std::optional<JsonError> LoadExternalBuffers(Document & document, std::string const& documentFilePath, ReadQuotas const& readQuotas = {});
