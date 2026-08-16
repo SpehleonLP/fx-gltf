@@ -1417,10 +1417,15 @@ namespace gltf
 
             // Only the structural decode differs; BIN framing (DataContext.binaryOffset
             // below) is identical for both, since chunkLength is the structural chunk's
-            // byte count either way.
+            // byte count either way. chunkLength is padded up to a 4-byte boundary (to
+            // keep the following BIN chunk aligned), so the CBOR range can end in up to
+            // 3 NUL pad bytes; strict=false lets from_cbor stop at the CBOR value's end
+            // instead of rejecting the trailing pad. (JSON's pad is whitespace, which
+            // its parser already ignores.)
             nlohmann::json structural = isCbor
                 ? nlohmann::json::from_cbor(binary.begin() + detail::HeaderSize,
-                                            binary.begin() + detail::HeaderSize + header.jsonHeader.chunkLength)
+                                            binary.begin() + detail::HeaderSize + header.jsonHeader.chunkLength,
+                                            /*strict*/ false)
                 : nlohmann::json::parse({ &binary[detail::HeaderSize], header.jsonHeader.chunkLength });
 
             auto doc = detail::Create(
