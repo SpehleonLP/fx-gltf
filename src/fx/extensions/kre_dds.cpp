@@ -1,5 +1,6 @@
 #include "kre_dds.h"
 #include "fx/gltf.h"
+#include <loguru/loguru.hpp>
 #include <optional>
 #include <string_view>
 
@@ -41,7 +42,12 @@ void from_json(const nlohmann::json & json, texture_dds & db)
 
 	std::string storage = MimeForStorage(db.storage);
 	fx::gltf::detail::ReadOptionalField("storage", json, storage);
-	db.storage = StorageFromMime(storage).value_or(DdsStorage::Raw);
+
+	if(auto parsed = StorageFromMime(storage))
+		db.storage = *parsed;
+	else
+		LOG_F(WARNING, "KRE_texture_dds: unrecognised storage \"%s\"; treating as Raw "
+		      "(source %d) -- a hand-edited or corrupted file", storage.c_str(), db.source);
 
 	fx::gltf::detail::ReadOptionalField("swizzle", json, db.swizzle);
 }
