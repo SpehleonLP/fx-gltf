@@ -191,9 +191,7 @@ void to_json(nlohmann::json & json, NodeArticulation const& obj);
 
 namespace KRE
 {
-void to_json(nlohmann::json & json, texture_dds const& db);
-void from_json(const nlohmann::json & json, texture_dds & db);
-
+// to_json/from_json(texture_dds) now declared in kre_dds.h itself.
 void from_json(const nlohmann::json & json, texture_cmp & db);
 void from_json(const nlohmann::json & json, RootMotion & db);
 void from_json(const nlohmann::json & json, RinTinTin & db);

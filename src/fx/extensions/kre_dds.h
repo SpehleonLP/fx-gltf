@@ -1,6 +1,7 @@
 #ifndef KRE_DDS_H
 #define KRE_DDS_H
 #include "RHI/rhi_pod.h"
+#include <nlohmann/json.hpp>
 #include <cstdint>
 #include <optional>
 #include <string_view>
@@ -30,6 +31,13 @@ struct texture_dds
 		    && storage == it.storage && swizzle == it.swizzle;
 	}
 };
+
+// Declared here (defined in kre_dds.cpp) so any TU that names texture_dds can
+// nlohmann::json::get<>/assign it via ADL. Previously only forward-declared
+// privately inside extensionsandextras.cpp, which worked for THAT TU alone and
+// left a static_assert trap for the next one -- gltf_output.cpp hit it.
+void to_json(nlohmann::json & json, texture_dds const& db);
+void from_json(nlohmann::json const& json, texture_dds & db);
 
 struct texture_cmp
 {
