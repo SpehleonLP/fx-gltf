@@ -208,12 +208,12 @@ namespace Extensions
 
 void to_json(nlohmann::json & json, Animation const& db)
 {
-	fx::gltf::detail::WriteField("KRE_root_motion", json, db.lf_rootMotion);
+	fx::gltf::detail::WriteField("KRE_root_motion", json, db.rootMotion);
 }
 
 void from_json(const nlohmann::json & json, Animation & db)
 {
-	fx::gltf::detail::ReadOptionalField("KRE_root_motion", json, db.lf_rootMotion);
+	fx::gltf::detail::ReadOptionalField("KRE_root_motion", json, db.rootMotion);
 }
 
 static void to_json(nlohmann::json & json, PunctualLight const& light)

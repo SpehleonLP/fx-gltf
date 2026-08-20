@@ -25,9 +25,9 @@ typedef ::Empty Accessor;
 
 struct Animation
 {
-	KRE::RootMotion lf_rootMotion;
-	bool empty() const { return lf_rootMotion.empty(); }
-	bool operator==(Animation const& it) const { return lf_rootMotion == it.lf_rootMotion; }
+	KRE::RootMotion rootMotion;
+	bool empty() const { return rootMotion.empty(); }
+	bool operator==(Animation const& it) const { return rootMotion == it.rootMotion; }
 };
 
 typedef ::Empty Buffer;

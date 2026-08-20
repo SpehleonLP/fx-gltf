@@ -452,8 +452,8 @@ TEST(EeRoundTrip, InHouseExtensionWireNamesRoundTrip)
 	ee.nodes.resize(1);
 
 	// KRE_root_motion
-	ee.animations[0].extensions.lf_rootMotion.attach_node      = 3;
-	ee.animations[0].extensions.lf_rootMotion.translation_mask = 0b101;
+	ee.animations[0].extensions.rootMotion.attach_node      = 3;
+	ee.animations[0].extensions.rootMotion.translation_mask = 0b101;
 
 	// KRE_texture_dds — non-identity swizzle, so WriteField's default-omit
 	// doesn't skip it.
@@ -488,8 +488,8 @@ TEST(EeRoundTrip, InHouseExtensionWireNamesRoundTrip)
 	ee2.Unpack(doc);
 
 	ASSERT_EQ(ee2.animations.size(), 1u);
-	EXPECT_EQ(ee2.animations[0].extensions.lf_rootMotion.attach_node, 3);
-	EXPECT_EQ(ee2.animations[0].extensions.lf_rootMotion.translation_mask, 0b101);
+	EXPECT_EQ(ee2.animations[0].extensions.rootMotion.attach_node, 3);
+	EXPECT_EQ(ee2.animations[0].extensions.rootMotion.translation_mask, 0b101);
 
 	ASSERT_EQ(ee2.textures.size(), 1u);
 	ASSERT_TRUE(ee2.textures[0].extensions.dds.swizzle.has_value());
@@ -544,4 +544,27 @@ TEST(EeRoundTrip, ExplicitIdentitySwizzleSurvivesTheWire)
 		<< "the authored identity came back as 'no mask'";
 	EXPECT_EQ(*ee2.textures[0].extensions.dds.swizzle, Rhi::ComponentMapping{});
 	EXPECT_FALSE(ee2.textures[1].extensions.dds.swizzle.has_value());
+}
+
+//	An authored identity and a mask that failed to parse must not look the same to
+//	the loader: identity is engaged and SUPPRESSES the format-derived remap, so a
+//	hand-broken "rgx1" on a BC5 that degraded to identity would upload (R,G,0,1)
+//	and read metallic as 0 everywhere -- a third behaviour nobody authored. Absent
+//	is the only safe reading of a mask we could not understand.
+TEST(EeRoundTrip, MalformedSwizzleLeavesTheMaskUnengaged)
+{
+	fx::gltf::Document doc;
+	doc.images.resize(1);
+	doc.textures.resize(1);
+
+	doc.textures[0].extensionsAndExtras["extensions"]["KRE_texture_dds"] =
+		nlohmann::json{ {"source", 0}, {"swizzle", "rgx1"} };
+
+	fx::ExtensionsAndExtras ee;
+	ee.Unpack(doc);
+
+	ASSERT_EQ(ee.textures.size(), 1u);
+	EXPECT_EQ(ee.textures[0].extensions.dds.source, 0);
+	EXPECT_FALSE(ee.textures[0].extensions.dds.swizzle.has_value())
+		<< "an unparseable mask came back ENGAGED, which suppresses the format remap";
 }

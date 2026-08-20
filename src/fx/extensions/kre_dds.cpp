@@ -53,9 +53,23 @@ void from_json(const nlohmann::json & json, texture_dds & db)
 		LOG_F(WARNING, "KRE_texture_dds: unrecognised storage \"%s\"; treating as Raw "
 		      "(source %d) -- a hand-edited or corrupted file", storage.c_str(), db.source);
 
-	Rhi::ComponentMapping swizzle;
-	if(fx::gltf::detail::ReadOptionalField("swizzle", json, swizzle))
-		db.swizzle = swizzle;
+	//	Not ReadOptionalField: it reports that the KEY was there, not that it parsed,
+	//	and an ENGAGED swizzle means "suppress the format-derived remap" -- so a
+	//	malformed mask would give a hand-broken file a THIRD behaviour instead of
+	//	the one it had before the edit.
+	auto it = json.find("swizzle");
+
+	if(it != json.end() && it->is_string())
+	{
+		auto mask = it->get<std::string>();
+
+		if(auto parsed = ParseMask(mask))
+			db.swizzle = *parsed;
+		else
+			LOG_F(WARNING, "KRE_texture_dds: swizzle mask \"%s\" is not a "
+			      "[01rgbaRGBA]{3,4} permutation (source %d); ignored, and the "
+			      "format's own remap applies", mask.c_str(), db.source);
+	}
 }
 
 }
