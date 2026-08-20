@@ -3,12 +3,16 @@
 static const char * g_FamiliarExtensions[] =
 {
 	// in-house / already handled (was g_ExtensionsSupported)
-	"LF_animRoot", "LF_root_motion", "LF_swizzle", "LF_colliders", "LF_compression",
-	"LF_alternate", "MSFT_texture_dds", "MSFT_packing_normalRoughnessMetallic",
+	"LF_animRoot", "LF_root_motion",
+	"MSFT_texture_dds", "LZ4_texture_dds", "MSFT_packing_normalRoughnessMetallic",
 	"MSFT_packing_occlusionRoughnessMetallic", "AGI_articulations", "LF_RINTINTIN",
 	"KHR_materials_pbrSpecularGlossiness", "KHR_materials_unlit", "KHR_materials_sheen",
-	"KHR_materials_clearcoat", "KHR_mesh_quantization", "KHR_texture_transform",
-	// yes-list (this slice)
+	"KHR_mesh_quantization", "KHR_texture_transform",
+	// used to use but we now don't use cause it never came up and took up a spot in the g buffer for nothing. 
+	"KHR_materials_clearcoat", 
+	// in house that were dumb ideas, to remove,
+	"LF_colliders", "LF_compression", "LF_alternate", "LF_swizzle",
+	// yes-list, we can parse but they do nothing, to-add
 	"KHR_materials_emissive_strength", "KHR_materials_ior", "KHR_node_visibility",
 	"KHR_materials_specular", "EXT_mesh_gpu_instancing", "KHR_lights_punctual",
 	"KHR_materials_variants", "MSFT_lod", "EXT_lights_image_based", "KHR_animation_pointer",

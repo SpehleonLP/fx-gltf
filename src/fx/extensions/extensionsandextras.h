@@ -143,8 +143,8 @@ struct Texture
 	MSFT::texture_dds   dds;
 	MSFT::texture_dds   lz4_dds;
 
-	bool empty() const { return dds.empty(); }
-	bool operator==(Texture const& it) const { return dds == it.dds; }
+	bool empty() const { return dds.empty() && lz4_dds.empty(); }
+	bool operator==(Texture const& it) const { return dds == it.dds && lz4_dds == it.lz4_dds; }
 };
 
 // KHR_lights_punctual — one entry of the doc-level `lights` array.

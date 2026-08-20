@@ -13,7 +13,7 @@ struct texture_dds
 	bool empty() const { return source == -1; }
 	bool operator==(texture_dds const& it) const
 	{
-		return source == it.source;
+		return source == it.source && uncompressedSize == it.uncompressedSize;
 	}
 };
 
