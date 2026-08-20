@@ -146,6 +146,10 @@ struct Texture
 	bool operator==(Texture const& it) const { return dds == it.dds; }
 };
 
+// json-output escape hatch for a texture already reduced to Raw storage --
+// see the definition for why it bypasses to_json(Texture).
+nlohmann::json ToMsftTextureDds(int32_t source);
+
 // KHR_lights_punctual — one entry of the doc-level `lights` array.
 struct PunctualLight
 {

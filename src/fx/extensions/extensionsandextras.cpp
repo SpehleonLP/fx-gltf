@@ -548,6 +548,16 @@ void from_json(const nlohmann::json & json, Texture & extras)
 	fx::gltf::detail::ReadOptionalField("KRE_texture_dds", json, extras.dds);
 }
 
+// json-output-only: the standard extension carries `source` and nothing else
+// -- no subtype, no swizzle -- so it does not route through to_json(Texture)
+// above, which always names KRE_texture_dds.
+nlohmann::json ToMsftTextureDds(int32_t source)
+{
+	nlohmann::json json;
+	json["source"] = source;
+	return json;
+}
+
 void to_json(nlohmann::json & json, Material const& material)
 {
 	fx::gltf::detail::WriteField("KHR_materials_pbrSpecularGlossiness", json, material.pbrSpecularGlossiness);
