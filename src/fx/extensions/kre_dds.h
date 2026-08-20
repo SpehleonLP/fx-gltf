@@ -2,6 +2,8 @@
 #define KRE_DDS_H
 #include "RHI/rhi_pod.h"
 #include <cstdint>
+#include <optional>
+#include <string_view>
 
 namespace KRE
 {
@@ -27,6 +29,9 @@ struct texture_cmp
 	bool operator==(texture_cmp const& it) const { return bc == it.bc && swizzle == it.swizzle; }
 };
 
+// nullopt on anything not a well-formed [01rgbaRGBA]{3,4} mask; shared with the
+// gltf sidecar parser so the permutation grammar has one implementation.
+std::optional<Rhi::ComponentMapping> ParseMask(std::string_view mask);
 
 }
 
