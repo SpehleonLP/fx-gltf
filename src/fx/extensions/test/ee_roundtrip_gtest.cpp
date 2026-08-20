@@ -409,18 +409,20 @@ TEST(ExtensionNames, EveryInHouseNameIsWrittenAndRecognized)
 	static char const* kInHouse[] = {
 		"KRE_animRoot", "KRE_root_motion", "KRE_rintintin", "KRE_colliders",
 		"KRE_compression", "KRE_alternate", "KRE_swizzle",
-		"KRE_texture_dds", "KRE_texture_dds_lz4",
+		"KRE_texture_dds",
 	};
 
 	for(auto const* name : kInHouse)
 		EXPECT_TRUE(fx::IsFamiliarExtension(name)) << name;
 
 	//	The old spellings must be gone, not merely superseded: a tolerated read
-	//	is exactly what this branch is removing.
+	//	is exactly what this branch is removing. KRE_texture_dds_lz4 joins this
+	//	list in Task 8: the subtype now lives inside KRE_texture_dds itself.
 	static char const* kRetired[] = {
 		"LF_animRoot", "LF_root_motion", "LF_RINTINTIN", "LF_colliders",
 		"LF_compression", "LF_Compression", "LF_alternate",
 		"LF_swizzle", "LF_Swizzle", "MSFT_texture_dds", "LZ4_texture_dds",
+		"KRE_texture_dds_lz4",
 	};
 
 	for(auto const* name : kRetired)

@@ -8,15 +8,26 @@
 namespace KRE
 {
 
+// Chosen by measured size, not authored -- decoding is byte-identical either way.
+enum class DdsStorage : uint8_t { Raw, Lz4, DeinterleavedLz4 };
+
+// Shared by images[].mimeType and texture_dds's "storage" field. nullopt = not
+// a KRE dds subtype (e.g. a PNG mimeType).
+char const* MimeForStorage(DdsStorage);
+std::optional<DdsStorage> StorageFromMime(std::string_view mime);
+
 struct texture_dds
 {
-	int32_t source{-1};
-	uint32_t uncompressedSize{};
+	int32_t                source{-1};
+	uint32_t                uncompressedSize{};
+	DdsStorage              storage{DdsStorage::Raw};
+	Rhi::ComponentMapping   swizzle{};   // populated in Task 9
 
 	bool empty() const { return source == -1; }
 	bool operator==(texture_dds const& it) const
 	{
-		return source == it.source && uncompressedSize == it.uncompressedSize;
+		return source == it.source && uncompressedSize == it.uncompressedSize
+		    && storage == it.storage && swizzle == it.swizzle;
 	}
 };
 

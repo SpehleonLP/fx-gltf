@@ -140,11 +140,10 @@ typedef ::Empty Skin;
 
 struct Texture
 {
-	KRE::texture_dds   dds;
-	KRE::texture_dds   lz4_dds;
+	KRE::texture_dds dds;
 
-	bool empty() const { return dds.empty() && lz4_dds.empty(); }
-	bool operator==(Texture const& it) const { return dds == it.dds && lz4_dds == it.lz4_dds; }
+	bool empty() const { return dds.empty(); }
+	bool operator==(Texture const& it) const { return dds == it.dds; }
 };
 
 // KHR_lights_punctual — one entry of the doc-level `lights` array.

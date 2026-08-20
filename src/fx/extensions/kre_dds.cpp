@@ -6,16 +6,44 @@
 namespace KRE
 {
 
+char const* MimeForStorage(DdsStorage storage)
+{
+	switch(storage)
+	{
+	case DdsStorage::Raw:              return "image/dds";
+	case DdsStorage::Lz4:              return "image/dds+lz4";
+	case DdsStorage::DeinterleavedLz4: return "image/dds+lz4x";
+	}
+	return "image/dds";
+}
+
+std::optional<DdsStorage> StorageFromMime(std::string_view mime)
+{
+	if(mime == "image/dds")      return DdsStorage::Raw;
+	if(mime == "image/dds+lz4")  return DdsStorage::Lz4;
+	if(mime == "image/dds+lz4x") return DdsStorage::DeinterleavedLz4;
+	return std::nullopt;
+}
+
 void to_json(nlohmann::json & json, texture_dds const& db)
 {
 	fx::gltf::detail::WriteField("source", json, db.source, -1);
 	fx::gltf::detail::WriteField("uncompressedSize", json, db.uncompressedSize, 0u);
+	fx::gltf::detail::WriteField("storage", json, std::string(MimeForStorage(db.storage)),
+	                             std::string(MimeForStorage(DdsStorage::Raw)));
+	fx::gltf::detail::WriteField("swizzle", json, db.swizzle, Rhi::ComponentMapping{});
 }
 
 void from_json(const nlohmann::json & json, texture_dds & db)
 {
 	fx::gltf::detail::ReadRequiredField("source", json, db.source);
 	fx::gltf::detail::ReadOptionalField("uncompressedSize", json, db.uncompressedSize);
+
+	std::string storage = MimeForStorage(db.storage);
+	fx::gltf::detail::ReadOptionalField("storage", json, storage);
+	db.storage = StorageFromMime(storage).value_or(DdsStorage::Raw);
+
+	fx::gltf::detail::ReadOptionalField("swizzle", json, db.swizzle);
 }
 
 }

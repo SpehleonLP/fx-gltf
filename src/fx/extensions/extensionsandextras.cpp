@@ -4,7 +4,7 @@ static const char * g_FamiliarExtensions[] =
 {
 	// in-house / already handled (was g_ExtensionsSupported)
 	"KRE_animRoot", "KRE_root_motion", "KRE_rintintin",
-	"KRE_texture_dds", "KRE_texture_dds_lz4", "MSFT_packing_normalRoughnessMetallic",
+	"KRE_texture_dds", "MSFT_packing_normalRoughnessMetallic",
 	"MSFT_packing_occlusionRoughnessMetallic", "AGI_articulations",
 	"KHR_materials_pbrSpecularGlossiness", "KHR_materials_unlit", "KHR_materials_sheen",
 	"KHR_mesh_quantization", "KHR_texture_transform",
@@ -540,14 +540,12 @@ void from_json(const nlohmann::json & json, Mesh & db)
 
 void to_json(nlohmann::json & json, Texture const& extras)
 {
-	fx::gltf::detail::WriteField("KRE_texture_dds", json,   extras.dds);
-	fx::gltf::detail::WriteField("KRE_texture_dds_lz4", json,   extras.lz4_dds);
+	fx::gltf::detail::WriteField("KRE_texture_dds", json, extras.dds);
 }
 
 void from_json(const nlohmann::json & json, Texture & extras)
 {
-	fx::gltf::detail::ReadOptionalField("KRE_texture_dds", json,   extras.dds);
-	fx::gltf::detail::ReadOptionalField("KRE_texture_dds_lz4", json,   extras.lz4_dds);
+	fx::gltf::detail::ReadOptionalField("KRE_texture_dds", json, extras.dds);
 }
 
 void to_json(nlohmann::json & json, Material const& material)
