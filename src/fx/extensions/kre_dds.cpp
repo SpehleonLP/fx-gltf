@@ -136,7 +136,20 @@ void from_json(nlohmann::json const& json, ComponentMapping& db)
 	//	A malformed mask keeps the identity rather than guessing which channels
 	//	the author meant. The repackager rejects the file before it can be
 	//	written this way; reaching here means a hand-edited asset.
-	db = KRE::ParseMask(json.get<std::string>()).value_or(ComponentMapping{});
+	std::string mask = json.get<std::string>();
+
+	if(auto parsed = KRE::ParseMask(mask))
+	{
+		db = *parsed;
+		return;
+	}
+
+	//	Degrading to identity without saying so is a wrong-pixels bug with no
+	//	diagnostic: the texture loads, the channels are simply not where the
+	//	material reads them.
+	LOG_F(WARNING, "swizzle mask \"%s\" is not a [01rgbaRGBA]{3,4} permutation; "
+	      "using the identity mapping", mask.c_str());
+	db = ComponentMapping{};
 }
 
 }  // namespace Rhi
