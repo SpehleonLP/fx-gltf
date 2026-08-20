@@ -407,8 +407,7 @@ TEST(EeRoundTrip, AnimationPointerTargetString)
 TEST(ExtensionNames, EveryInHouseNameIsWrittenAndRecognized)
 {
 	static char const* kInHouse[] = {
-		"KRE_animRoot", "KRE_root_motion", "KRE_rintintin", "KRE_colliders",
-		"KRE_compression", "KRE_alternate", "KRE_swizzle",
+		"KRE_animRoot", "KRE_root_motion", "KRE_rintintin",
 		"KRE_texture_dds",
 	};
 
@@ -416,13 +415,15 @@ TEST(ExtensionNames, EveryInHouseNameIsWrittenAndRecognized)
 		EXPECT_TRUE(fx::IsFamiliarExtension(name)) << name;
 
 	//	The old spellings must be gone, not merely superseded: a tolerated read
-	//	is exactly what this branch is removing. KRE_texture_dds_lz4 joins this
-	//	list in Task 8: the subtype now lives inside KRE_texture_dds itself.
+	//	is exactly what this branch removed. The KRE_ spellings here were live
+	//	names in this same codebase, so a re-added allow-list entry is the
+	//	likeliest way they come back.
 	static char const* kRetired[] = {
 		"LF_animRoot", "LF_root_motion", "LF_RINTINTIN", "LF_colliders",
 		"LF_compression", "LF_Compression", "LF_alternate",
 		"LF_swizzle", "LF_Swizzle", "MSFT_texture_dds", "LZ4_texture_dds",
 		"KRE_texture_dds_lz4",
+		"KRE_colliders", "KRE_compression", "KRE_alternate", "KRE_swizzle",
 	};
 
 	for(auto const* name : kRetired)
@@ -435,37 +436,31 @@ TEST(ExtensionNames, EveryInHouseNameIsWrittenAndRecognized)
 //	through the real Pack()/Unpack() path instead: it sets each field via its
 //	typed struct, inspects the ACTUAL emitted JSON key, and round-trips it
 //	back through Unpack(), so a wrong or stale string literal in either
-//	direction shows up here. KRE_colliders/KRE_alternate/KRE_animRoot have no
-//	typed field anywhere in ExtensionsAndExtras (dead allow-list entries with
-//	no Pack/Unpack site — see extensionsandextras.cpp's "dumb ideas to
-//	remove" comment), so there is nothing to round-trip for them; the
-//	allow-list test above remains their only coverage.
+//	direction shows up here. KRE_animRoot has no typed field anywhere in
+//	ExtensionsAndExtras, so there is nothing to round-trip for it; the
+//	allow-list test above remains its only coverage.
 TEST(EeRoundTrip, InHouseExtensionWireNamesRoundTrip)
 {
 	fx::gltf::Document doc;
 	doc.animations.resize(1);
-	doc.images.resize(1);
-	doc.samplers.resize(1);
+	doc.textures.resize(1);
 	doc.nodes.resize(1);
 
 	fx::ExtensionsAndExtras ee;
 	ee.animations.resize(1);
-	ee.images.resize(1);
-	ee.samplers.resize(1);
+	ee.textures.resize(1);
 	ee.nodes.resize(1);
 
 	// KRE_root_motion
 	ee.animations[0].extensions.lf_rootMotion.attach_node      = 3;
 	ee.animations[0].extensions.lf_rootMotion.translation_mask = 0b101;
 
-	// KRE_compression
-	ee.images[0].extensions.compression.bc = 7;
-
-	// KRE_swizzle — non-identity, so WriteField's default-omit doesn't skip it.
-	ee.samplers[0].extensions.swizzle.r = Rhi::ComponentSwizzle::G;
-	ee.samplers[0].extensions.swizzle.g = Rhi::ComponentSwizzle::R;
-	ee.samplers[0].extensions.swizzle.b = Rhi::ComponentSwizzle::B;
-	ee.samplers[0].extensions.swizzle.a = Rhi::ComponentSwizzle::A;
+	// KRE_texture_dds — non-identity swizzle, so WriteField's default-omit
+	// doesn't skip it.
+	ee.textures[0].extensions.dds.source  = 0;
+	ee.textures[0].extensions.dds.swizzle = Rhi::ComponentMapping{
+		Rhi::ComponentSwizzle::G, Rhi::ComponentSwizzle::R,
+		Rhi::ComponentSwizzle::B, Rhi::ComponentSwizzle::A };
 
 	// KRE_rintintin
 	KRE::RinTinTin::Metrics metrics{};
@@ -479,13 +474,9 @@ TEST(EeRoundTrip, InHouseExtensionWireNamesRoundTrip)
 	ASSERT_EQ(aext.count("KRE_root_motion"), 1u) << aext.dump();
 	EXPECT_EQ(aext["KRE_root_motion"]["attach_node"].get<int32_t>(), 3);
 
-	auto& iext = doc.images[0].extensionsAndExtras["extensions"];
-	ASSERT_EQ(iext.count("KRE_compression"), 1u) << iext.dump();
-	EXPECT_EQ(iext["KRE_compression"]["bc"].get<int>(), 7);
-
-	auto& sext = doc.samplers[0].extensionsAndExtras["extensions"];
-	ASSERT_EQ(sext.count("KRE_swizzle"), 1u) << sext.dump();
-	EXPECT_EQ(sext["KRE_swizzle"].get<std::string>(), "grba");
+	auto& text = doc.textures[0].extensionsAndExtras["extensions"];
+	ASSERT_EQ(text.count("KRE_texture_dds"), 1u) << text.dump();
+	EXPECT_EQ(text["KRE_texture_dds"]["swizzle"].get<std::string>(), "grba");
 
 	auto& next = doc.nodes[0].extensionsAndExtras["extensions"];
 	ASSERT_EQ(next.count("KRE_rintintin"), 1u) << next.dump();
@@ -500,14 +491,12 @@ TEST(EeRoundTrip, InHouseExtensionWireNamesRoundTrip)
 	EXPECT_EQ(ee2.animations[0].extensions.lf_rootMotion.attach_node, 3);
 	EXPECT_EQ(ee2.animations[0].extensions.lf_rootMotion.translation_mask, 0b101);
 
-	ASSERT_EQ(ee2.images.size(), 1u);
-	EXPECT_EQ(ee2.images[0].extensions.compression.bc, 7);
-
-	ASSERT_EQ(ee2.samplers.size(), 1u);
-	EXPECT_EQ(ee2.samplers[0].extensions.swizzle.r, Rhi::ComponentSwizzle::G);
-	EXPECT_EQ(ee2.samplers[0].extensions.swizzle.g, Rhi::ComponentSwizzle::R);
-	EXPECT_EQ(ee2.samplers[0].extensions.swizzle.b, Rhi::ComponentSwizzle::B);
-	EXPECT_EQ(ee2.samplers[0].extensions.swizzle.a, Rhi::ComponentSwizzle::A);
+	ASSERT_EQ(ee2.textures.size(), 1u);
+	ASSERT_TRUE(ee2.textures[0].extensions.dds.swizzle.has_value());
+	EXPECT_EQ(ee2.textures[0].extensions.dds.swizzle->r, Rhi::ComponentSwizzle::G);
+	EXPECT_EQ(ee2.textures[0].extensions.dds.swizzle->g, Rhi::ComponentSwizzle::R);
+	EXPECT_EQ(ee2.textures[0].extensions.dds.swizzle->b, Rhi::ComponentSwizzle::B);
+	EXPECT_EQ(ee2.textures[0].extensions.dds.swizzle->a, Rhi::ComponentSwizzle::A);
 
 	ASSERT_EQ(ee2.nodes.size(), 1u);
 	ASSERT_EQ(ee2.nodes[0].extensions.rintintin.metrics.size(), 1u);

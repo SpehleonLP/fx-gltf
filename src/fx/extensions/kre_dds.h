@@ -45,15 +45,6 @@ struct texture_dds
 void to_json(nlohmann::json & json, texture_dds const& db);
 void from_json(nlohmann::json const& json, texture_dds & db);
 
-struct texture_cmp
-{
-	short                 bc{-1};
-	Rhi::ComponentMapping swizzle{};
-
-	bool empty() const { return bc == -1 && swizzle == Rhi::ComponentMapping{}; }
-	bool operator==(texture_cmp const& it) const { return bc == it.bc && swizzle == it.swizzle; }
-};
-
 // nullopt on anything not a well-formed [01rgbaRGBA]{3,4} mask; shared with the
 // gltf sidecar parser so the permutation grammar has one implementation.
 std::optional<Rhi::ComponentMapping> ParseMask(std::string_view mask);

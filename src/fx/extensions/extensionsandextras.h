@@ -34,23 +34,10 @@ typedef ::Empty Buffer;
 typedef ::Empty BufferView;
 typedef ::Empty Camera;
 
-struct Image
-{
-//this is instructions for the compressor to re-export this image.
-	KRE::texture_cmp compression;
-	uint32_t        uncompressedSize{};
-
-	bool empty() const { return compression.empty(); }
-	bool operator==(Image const& it) const { return compression == it.compression && uncompressedSize == it.uncompressedSize; }
-};
-
-struct Sampler
-{
-	Rhi::ComponentMapping swizzle;
-
-	bool empty() const { return swizzle == Rhi::ComponentMapping{}; }
-	bool operator==(Sampler const& it) const { return swizzle == it.swizzle; }
-};
+// Empty because storage and swizzle now live per-TEXTURE in KRE_texture_dds --
+// the scope the loader reads -- not per-image or per-sampler.
+typedef ::Empty Image;
+typedef ::Empty Sampler;
 
 struct Material
 {
@@ -206,8 +193,6 @@ struct Document
 
 
 void to_json(nlohmann::json & json, Animation const& db);
-void to_json(nlohmann::json & json, Image const& db);
-void to_json(nlohmann::json & json, Sampler const& db);
 void to_json(nlohmann::json & json, Document const& db);
 void to_json(nlohmann::json & json, Mesh const& db);
 void to_json(nlohmann::json & json, Primitive const& db);
@@ -217,8 +202,6 @@ void to_json(nlohmann::json & json, Texture const& extras);
 void to_json(nlohmann::json & json, Material const& material);
 
 void from_json(const nlohmann::json & json, Animation & db);
-void from_json(const nlohmann::json & json, Image & db);
-void from_json(const nlohmann::json & json, Sampler & db);
 void from_json(const nlohmann::json & json, Document & db);
 void from_json(const nlohmann::json & json, Mesh & db);
 void from_json(const nlohmann::json & json, Primitive & db);

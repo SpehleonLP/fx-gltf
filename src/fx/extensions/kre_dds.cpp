@@ -126,7 +126,7 @@ std::optional<Rhi::ComponentMapping> ParseMask(std::string_view mask)
 
 // to_json/from_json for Rhi::ComponentMapping live in Rhi's own namespace -- ADL
 // resolves them from that namespace, not from KRE, since ComponentMapping is a
-// Rhi type. KRE::texture_cmp::swizzle serializes through these transitively.
+// Rhi type. KRE::texture_dds::swizzle serializes through these transitively.
 namespace Rhi
 {
 
@@ -159,23 +159,3 @@ void from_json(nlohmann::json const& json, ComponentMapping& db)
 }
 
 }  // namespace Rhi
-
-namespace KRE
-{
-
-void to_json(nlohmann::json & json, texture_cmp const& db)
-{
-	fx::gltf::detail::WriteField("bc", json, db.bc, (short)-1);
-	fx::gltf::detail::WriteField("swizzle", json, db.swizzle, Rhi::ComponentMapping{});
-
-}
-
-void from_json(nlohmann::json const& json, texture_cmp  & db)
-{
-	fx::gltf::detail::ReadRequiredField("bc", json, db.bc);
-	Rhi::ComponentMapping swizzle;
-	if(fx::gltf::detail::ReadOptionalField("swizzle", json, swizzle))
-		db.swizzle = swizzle;
-}
-
-};

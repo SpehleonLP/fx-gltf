@@ -10,8 +10,6 @@ static const char * g_FamiliarExtensions[] =
 	"KHR_mesh_quantization", "KHR_texture_transform",
 	// used to use but we now don't use cause it never came up and took up a spot in the g buffer for nothing.
 	"KHR_materials_clearcoat",
-	// in house, superseded by KRE_texture_dds; removed once the assets migrate
-	"KRE_colliders", "KRE_compression", "KRE_alternate", "KRE_swizzle",
 	// yes-list, we can parse but they do nothing, to-add
 	"KHR_materials_emissive_strength", "KHR_materials_ior", "KHR_node_visibility",
 	"KHR_materials_specular", "EXT_mesh_gpu_instancing", "KHR_lights_punctual",
@@ -192,11 +190,9 @@ void to_json(nlohmann::json & json, NodeArticulation const& obj);
 namespace KRE
 {
 // to_json/from_json(texture_dds) now declared in kre_dds.h itself.
-void from_json(const nlohmann::json & json, texture_cmp & db);
 void from_json(const nlohmann::json & json, RootMotion & db);
 void from_json(const nlohmann::json & json, RinTinTin & db);
 
-void to_json(nlohmann::json & json, texture_cmp const& db);
 void to_json(nlohmann::json & json, RootMotion const& db);
 void to_json(nlohmann::json & json, RinTinTin const& db);
 }
@@ -219,27 +215,6 @@ void from_json(const nlohmann::json & json, Animation & db)
 {
 	fx::gltf::detail::ReadOptionalField("KRE_root_motion", json, db.lf_rootMotion);
 }
-
-void to_json(nlohmann::json & json, Image const& db)
-{
-	fx::gltf::detail::WriteField("KRE_compression", json, db.compression);
-}
-
-void from_json(const nlohmann::json & json, Image & db)
-{
-	fx::gltf::detail::ReadOptionalField("KRE_compression", json, db.compression);
-}
-
-void to_json(nlohmann::json & json, Sampler const& db)
-{
-	fx::gltf::detail::WriteField("KRE_swizzle", json, db.swizzle, Rhi::ComponentMapping{});
-}
-
-void from_json(const nlohmann::json & json, Sampler & db)
-{
-	fx::gltf::detail::ReadOptionalField("KRE_swizzle", json, db.swizzle);
-}
-
 
 static void to_json(nlohmann::json & json, PunctualLight const& light)
 {
