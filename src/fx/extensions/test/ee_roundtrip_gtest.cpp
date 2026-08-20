@@ -513,3 +513,46 @@ TEST(EeRoundTrip, InHouseExtensionWireNamesRoundTrip)
 	ASSERT_EQ(ee2.nodes[0].extensions.rintintin.metrics.size(), 1u);
 	EXPECT_FLOAT_EQ(ee2.nodes[0].extensions.rintintin.metrics[0].volume, 42.5f);
 }
+
+//	An explicitly authored IDENTITY mask is not the same asset as one with no mask:
+//	on a BC5 it says "do not apply the loader's two-channel remap", where absence
+//	says "do". WriteField-with-default would drop it and silently turn the first
+//	into the second, so presence has to survive the wire on its own.
+TEST(EeRoundTrip, ExplicitIdentitySwizzleSurvivesTheWire)
+{
+	fx::gltf::Document doc;
+	doc.images.resize(1);
+	doc.textures.resize(2);
+
+	fx::ExtensionsAndExtras ee;
+	ee.textures.resize(2);
+
+	//	texture 0 authored identity; texture 1 authored nothing at all.
+	ee.textures[0].extensions.dds.source  = 0;
+	ee.textures[0].extensions.dds.swizzle = Rhi::ComponentMapping{};
+	ee.textures[1].extensions.dds.source  = 0;
+
+	ee.Pack(doc);
+
+	auto& t0 = doc.textures[0].extensionsAndExtras["extensions"];
+	ASSERT_EQ(t0.count("KRE_texture_dds"), 1u) << t0.dump();
+	ASSERT_EQ(t0["KRE_texture_dds"].count("swizzle"), 1u)
+		<< "an authored identity must be WRITTEN, not defaulted away: " << t0.dump();
+	EXPECT_EQ(t0["KRE_texture_dds"]["swizzle"].get<std::string>(), "rgba");
+
+	auto& t1 = doc.textures[1].extensionsAndExtras["extensions"];
+	ASSERT_EQ(t1.count("KRE_texture_dds"), 1u) << t1.dump();
+	EXPECT_EQ(t1["KRE_texture_dds"].count("swizzle"), 0u)
+		<< "an absent mask must stay absent, or every legacy asset gains one";
+
+	//	Through the real serialize path, not just Pack/Unpack in memory.
+	fx::gltf::Document rt = SaveReloadText(doc);
+	fx::ExtensionsAndExtras ee2;
+	ee2.Unpack(rt);
+
+	ASSERT_EQ(ee2.textures.size(), 2u);
+	ASSERT_TRUE(ee2.textures[0].extensions.dds.swizzle.has_value())
+		<< "the authored identity came back as 'no mask'";
+	EXPECT_EQ(*ee2.textures[0].extensions.dds.swizzle, Rhi::ComponentMapping{});
+	EXPECT_FALSE(ee2.textures[1].extensions.dds.swizzle.has_value());
+}

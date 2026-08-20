@@ -32,7 +32,11 @@ void to_json(nlohmann::json & json, texture_dds const& db)
 	fx::gltf::detail::WriteField("uncompressedSize", json, db.uncompressedSize, 0u);
 	fx::gltf::detail::WriteField("storage", json, std::string(MimeForStorage(db.storage)),
 	                             std::string(MimeForStorage(DdsStorage::Raw)));
-	fx::gltf::detail::WriteField("swizzle", json, db.swizzle, Rhi::ComponentMapping{});
+	//	NOT WriteField-with-default: that drops an explicitly authored identity,
+	//	which is a real instruction (see texture_dds::swizzle). Presence in the
+	//	json IS the presence flag.
+	if(db.swizzle)
+		json["swizzle"] = *db.swizzle;
 }
 
 void from_json(const nlohmann::json & json, texture_dds & db)
@@ -49,7 +53,9 @@ void from_json(const nlohmann::json & json, texture_dds & db)
 		LOG_F(WARNING, "KRE_texture_dds: unrecognised storage \"%s\"; treating as Raw "
 		      "(source %d) -- a hand-edited or corrupted file", storage.c_str(), db.source);
 
-	fx::gltf::detail::ReadOptionalField("swizzle", json, db.swizzle);
+	Rhi::ComponentMapping swizzle;
+	if(fx::gltf::detail::ReadOptionalField("swizzle", json, swizzle))
+		db.swizzle = swizzle;
 }
 
 }
@@ -167,7 +173,9 @@ void to_json(nlohmann::json & json, texture_cmp const& db)
 void from_json(nlohmann::json const& json, texture_cmp  & db)
 {
 	fx::gltf::detail::ReadRequiredField("bc", json, db.bc);
-	fx::gltf::detail::ReadOptionalField("swizzle", json, db.swizzle);
+	Rhi::ComponentMapping swizzle;
+	if(fx::gltf::detail::ReadOptionalField("swizzle", json, swizzle))
+		db.swizzle = swizzle;
 }
 
 };

@@ -22,7 +22,13 @@ struct texture_dds
 	int32_t                source{-1};
 	uint32_t                uncompressedSize{};
 	DdsStorage              storage{DdsStorage::Raw};
-	Rhi::ComponentMapping   swizzle{};   // populated in Task 9
+	//	Per-texture channel permutation of the STORED image: which stored channel
+	//	each output channel reads. Engaged means the cook authored one -- INCLUDING
+	//	an explicit identity, which says "do not apply the loader's format-derived
+	//	two-channel remap" and is a different instruction from absence, where that
+	//	remap is exactly what the asset was cooked to expect. Value alone cannot
+	//	carry that distinction, so presence is carried separately.
+	std::optional<Rhi::ComponentMapping> swizzle;
 
 	bool empty() const { return source == -1; }
 	bool operator==(texture_dds const& it) const
