@@ -426,3 +426,88 @@ TEST(ExtensionNames, EveryInHouseNameIsWrittenAndRecognized)
 	for(auto const* name : kRetired)
 		EXPECT_FALSE(fx::IsFamiliarExtension(name)) << name;
 }
+
+//	The allow-list test above cannot catch a WriteField/ReadOptionalField
+//	literal drifting from the allow-list (that is exactly the bug class this
+//	rename existed to fix — LF_compression vs LF_Compression). This test goes
+//	through the real Pack()/Unpack() path instead: it sets each field via its
+//	typed struct, inspects the ACTUAL emitted JSON key, and round-trips it
+//	back through Unpack(), so a wrong or stale string literal in either
+//	direction shows up here. KRE_colliders/KRE_alternate/KRE_animRoot have no
+//	typed field anywhere in ExtensionsAndExtras (dead allow-list entries with
+//	no Pack/Unpack site — see extensionsandextras.cpp's "dumb ideas to
+//	remove" comment), so there is nothing to round-trip for them; the
+//	allow-list test above remains their only coverage.
+TEST(EeRoundTrip, InHouseExtensionWireNamesRoundTrip)
+{
+	fx::gltf::Document doc;
+	doc.animations.resize(1);
+	doc.images.resize(1);
+	doc.samplers.resize(1);
+	doc.nodes.resize(1);
+
+	fx::ExtensionsAndExtras ee;
+	ee.animations.resize(1);
+	ee.images.resize(1);
+	ee.samplers.resize(1);
+	ee.nodes.resize(1);
+
+	// KRE_root_motion
+	ee.animations[0].extensions.lf_rootMotion.attach_node      = 3;
+	ee.animations[0].extensions.lf_rootMotion.translation_mask = 0b101;
+
+	// KRE_compression
+	ee.images[0].extensions.compression.bc = 7;
+
+	// KRE_swizzle — non-identity, so WriteField's default-omit doesn't skip it.
+	ee.samplers[0].extensions.swizzle.r = Rhi::ComponentSwizzle::G;
+	ee.samplers[0].extensions.swizzle.g = Rhi::ComponentSwizzle::R;
+	ee.samplers[0].extensions.swizzle.b = Rhi::ComponentSwizzle::B;
+	ee.samplers[0].extensions.swizzle.a = Rhi::ComponentSwizzle::A;
+
+	// KRE_rintintin
+	KRE::RinTinTin::Metrics metrics{};
+	metrics.volume = 42.5f;
+	ee.nodes[0].extensions.rintintin.metrics.push_back(metrics);
+
+	ee.Pack(doc);
+
+	// --- Assert the REAL emitted JSON keys, not the allow-list. ---
+	auto& aext = doc.animations[0].extensionsAndExtras["extensions"];
+	ASSERT_EQ(aext.count("KRE_root_motion"), 1u) << aext.dump();
+	EXPECT_EQ(aext["KRE_root_motion"]["attach_node"].get<int32_t>(), 3);
+
+	auto& iext = doc.images[0].extensionsAndExtras["extensions"];
+	ASSERT_EQ(iext.count("KRE_compression"), 1u) << iext.dump();
+	EXPECT_EQ(iext["KRE_compression"]["bc"].get<int>(), 7);
+
+	auto& sext = doc.samplers[0].extensionsAndExtras["extensions"];
+	ASSERT_EQ(sext.count("KRE_swizzle"), 1u) << sext.dump();
+	EXPECT_EQ(sext["KRE_swizzle"].get<std::string>(), "grba");
+
+	auto& next = doc.nodes[0].extensionsAndExtras["extensions"];
+	ASSERT_EQ(next.count("KRE_rintintin"), 1u) << next.dump();
+	ASSERT_EQ(next["KRE_rintintin"]["metrics"].size(), 1u);
+	EXPECT_FLOAT_EQ(next["KRE_rintintin"]["metrics"][0]["volume"].get<float>(), 42.5f);
+
+	// --- Unpack back into a fresh ee and check the values survive. ---
+	fx::ExtensionsAndExtras ee2;
+	ee2.Unpack(doc);
+
+	ASSERT_EQ(ee2.animations.size(), 1u);
+	EXPECT_EQ(ee2.animations[0].extensions.lf_rootMotion.attach_node, 3);
+	EXPECT_EQ(ee2.animations[0].extensions.lf_rootMotion.translation_mask, 0b101);
+
+	ASSERT_EQ(ee2.images.size(), 1u);
+	EXPECT_EQ(ee2.images[0].extensions.compression.bc, 7);
+
+	ASSERT_EQ(ee2.samplers.size(), 1u);
+	EXPECT_EQ(ee2.samplers[0].extensions.swizzle.r, Rhi::ComponentSwizzle::G);
+	EXPECT_EQ(ee2.samplers[0].extensions.swizzle.g, Rhi::ComponentSwizzle::R);
+	EXPECT_EQ(ee2.samplers[0].extensions.swizzle.b, Rhi::ComponentSwizzle::B);
+	EXPECT_EQ(ee2.samplers[0].extensions.swizzle.a, Rhi::ComponentSwizzle::A);
+
+	ASSERT_EQ(ee2.nodes.size(), 1u);
+	ASSERT_EQ(ee2.nodes[0].extensions.rintintin.metrics.size(), 1u);
+	EXPECT_FLOAT_EQ(ee2.nodes[0].extensions.rintintin.metrics[0].volume, 42.5f);
+}
