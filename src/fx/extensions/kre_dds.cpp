@@ -1,9 +1,9 @@
-#include "msft_texture_dds.h"
+#include "kre_dds.h"
 #include "fx/gltf.h"
 #include <optional>
 #include <string_view>
 
-namespace MSFT
+namespace KRE
 {
 
 void to_json(nlohmann::json & json, texture_dds const& db)
@@ -57,7 +57,7 @@ bool CharToSwizzle(char c, Rhi::ComponentSwizzle& out)
 
 }  // namespace
 
-namespace LF
+namespace KRE
 {
 
 //	Exposed rather than folded into Rhi::from_json: the sidecar parser needs the
@@ -82,11 +82,11 @@ std::optional<Rhi::ComponentMapping> ParseMask(std::string_view mask)
 	return out;
 }
 
-}  // namespace LF
+}  // namespace KRE
 
 // to_json/from_json for Rhi::ComponentMapping live in Rhi's own namespace -- ADL
-// resolves them from that namespace, not from LF, since ComponentMapping is a
-// Rhi type. LF::texture_cmp::swizzle serializes through these transitively.
+// resolves them from that namespace, not from KRE, since ComponentMapping is a
+// Rhi type. KRE::texture_cmp::swizzle serializes through these transitively.
 namespace Rhi
 {
 
@@ -102,12 +102,12 @@ void from_json(nlohmann::json const& json, ComponentMapping& db)
 	//	A malformed mask keeps the identity rather than guessing which channels
 	//	the author meant. The repackager rejects the file before it can be
 	//	written this way; reaching here means a hand-edited asset.
-	db = LF::ParseMask(json.get<std::string>()).value_or(ComponentMapping{});
+	db = KRE::ParseMask(json.get<std::string>()).value_or(ComponentMapping{});
 }
 
 }  // namespace Rhi
 
-namespace LF
+namespace KRE
 {
 
 void to_json(nlohmann::json & json, texture_cmp const& db)
@@ -124,4 +124,3 @@ void from_json(nlohmann::json const& json, texture_cmp  & db)
 }
 
 };
-

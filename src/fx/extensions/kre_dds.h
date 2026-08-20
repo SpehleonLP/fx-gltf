@@ -1,9 +1,9 @@
-#ifndef MSFT_TEXTURE_DDS_H
-#define MSFT_TEXTURE_DDS_H
+#ifndef KRE_DDS_H
+#define KRE_DDS_H
 #include "RHI/rhi_pod.h"
 #include <cstdint>
 
-namespace MSFT
+namespace KRE
 {
 
 struct texture_dds
@@ -18,11 +18,6 @@ struct texture_dds
 	}
 };
 
-}
-
-namespace LF
-{
-
 struct texture_cmp
 {
 	short                 bc{-1};
@@ -36,4 +31,4 @@ struct texture_cmp
 }
 
 
-#endif // MSFT_TEXTURE_DDS_H
+#endif // KRE_DDS_H

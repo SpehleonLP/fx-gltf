@@ -1,10 +1,10 @@
 #ifndef EXTENSIONSANDEXTRAS_H
 #define EXTENSIONSANDEXTRAS_H
 #include "agi_articulation.h"
-#include "msft_texture_dds.h"
+#include "kre_dds.h"
 #include "khr_materials.h"
-#include "lf_rintintin.h"
-#include "lf_root_motion.h"
+#include "kre_rintintin.h"
+#include "kre_root_motion.h"
 #include <fx/gltf.h>
 #include <array>
 #include <map>
@@ -25,7 +25,7 @@ typedef ::Empty Accessor;
 
 struct Animation
 {
-	LF::RootMotion lf_rootMotion;
+	KRE::RootMotion lf_rootMotion;
 	bool empty() const { return lf_rootMotion.empty(); }
 	bool operator==(Animation const& it) const { return lf_rootMotion == it.lf_rootMotion; }
 };
@@ -37,7 +37,7 @@ typedef ::Empty Camera;
 struct Image
 {
 //this is instructions for the compressor to re-export this image.
-	LF::texture_cmp compression;
+	KRE::texture_cmp compression;
 	uint32_t        uncompressedSize{};
 
 	bool empty() const { return compression.empty(); }
@@ -109,7 +109,7 @@ struct Node
 {
 	AGI::NodeArticulation	AGI_articulations;
 	AGI::NodeArticulation	ANIM_articulations;
-	LF::RinTinTin			rintintin;
+	KRE::RinTinTin			rintintin;
 	bool					visible{true};
 	int32_t					lightIndex{-1};	// KHR_lights_punctual: index into Document::punctualLights
 	std::vector<int32_t>	msftLodIds;		// MSFT_lod: alternate (lower-LOD) node indices into Document::nodes
@@ -140,8 +140,8 @@ typedef ::Empty Skin;
 
 struct Texture
 {
-	MSFT::texture_dds   dds;
-	MSFT::texture_dds   lz4_dds;
+	KRE::texture_dds   dds;
+	KRE::texture_dds   lz4_dds;
 
 	bool empty() const { return dds.empty() && lz4_dds.empty(); }
 	bool operator==(Texture const& it) const { return dds == it.dds && lz4_dds == it.lz4_dds; }

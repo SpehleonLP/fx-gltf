@@ -1,11 +1,11 @@
-#ifndef LF_ROOT_MOTION_H
-#define LF_ROOT_MOTION_H
+#ifndef KRE_ROOT_MOTION_H
+#define KRE_ROOT_MOTION_H
 #include <array>
 #include <cstdint>
 #include <glm/glm.hpp>
 #include <glm/gtc/quaternion.hpp>
 
-namespace LF
+namespace KRE
 {
 
 struct RootMotion
@@ -85,4 +85,4 @@ struct RootMotion
 
 }
 
-#endif // LF_ROOT_MOTION_H
+#endif // KRE_ROOT_MOTION_H

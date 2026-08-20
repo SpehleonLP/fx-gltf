@@ -1,9 +1,9 @@
-#ifndef LF_RINTINTIN_H
-#define LF_RINTINTIN_H
+#ifndef KRE_RINTINTIN_H
+#define KRE_RINTINTIN_H
 #include <array>
 #include <vector>
 
-namespace LF
+namespace KRE
 {
 
 struct Transform
@@ -55,4 +55,4 @@ struct RinTinTin
 
 }
 
-#endif // LF_RINTINTIN_H
+#endif // KRE_RINTINTIN_H

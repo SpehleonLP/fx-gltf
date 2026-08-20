@@ -1,4 +1,4 @@
-#include "lf_rintintin.h"
+#include "kre_rintintin.h"
 #include "fx/gltf.h"
 
 using namespace fx::gltf::detail;
@@ -9,7 +9,7 @@ using namespace fx::gltf::detail;
 #define Write_Field(x) WriteField(#x, json, db.x)
 #define WriteOptField(x, y) WriteField(#x, json, db.x, y)
 
-namespace LF
+namespace KRE
 {
 	inline void from_json(nlohmann::json const& json, RinTinTin::Eigen & db)
 	{

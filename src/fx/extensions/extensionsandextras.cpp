@@ -3,15 +3,15 @@
 static const char * g_FamiliarExtensions[] =
 {
 	// in-house / already handled (was g_ExtensionsSupported)
-	"LF_animRoot", "LF_root_motion",
-	"MSFT_texture_dds", "LZ4_texture_dds", "MSFT_packing_normalRoughnessMetallic",
-	"MSFT_packing_occlusionRoughnessMetallic", "AGI_articulations", "LF_RINTINTIN",
+	"KRE_animRoot", "KRE_root_motion", "KRE_rintintin",
+	"KRE_texture_dds", "KRE_texture_dds_lz4", "MSFT_packing_normalRoughnessMetallic",
+	"MSFT_packing_occlusionRoughnessMetallic", "AGI_articulations",
 	"KHR_materials_pbrSpecularGlossiness", "KHR_materials_unlit", "KHR_materials_sheen",
 	"KHR_mesh_quantization", "KHR_texture_transform",
-	// used to use but we now don't use cause it never came up and took up a spot in the g buffer for nothing. 
-	"KHR_materials_clearcoat", 
-	// in house that were dumb ideas, to remove,
-	"LF_colliders", "LF_compression", "LF_alternate", "LF_swizzle",
+	// used to use but we now don't use cause it never came up and took up a spot in the g buffer for nothing.
+	"KHR_materials_clearcoat",
+	// in house, superseded by KRE_texture_dds; removed once the assets migrate
+	"KRE_colliders", "KRE_compression", "KRE_alternate", "KRE_swizzle",
 	// yes-list, we can parse but they do nothing, to-add
 	"KHR_materials_emissive_strength", "KHR_materials_ior", "KHR_node_visibility",
 	"KHR_materials_specular", "EXT_mesh_gpu_instancing", "KHR_lights_punctual",
@@ -189,20 +189,11 @@ void to_json(nlohmann::json & json, Articulations const& obj);
 void to_json(nlohmann::json & json, NodeArticulation const& obj);
 }
 
-namespace MSFT
+namespace KRE
 {
 void to_json(nlohmann::json & json, texture_dds const& db);
 void from_json(const nlohmann::json & json, texture_dds & db);
-}
 
-namespace Rhi
-{
-void from_json(const nlohmann::json & json, ComponentMapping & db);
-void to_json(nlohmann::json & json, ComponentMapping const& db);
-}
-
-namespace LF
-{
 void from_json(const nlohmann::json & json, texture_cmp & db);
 void from_json(const nlohmann::json & json, RootMotion & db);
 void from_json(const nlohmann::json & json, RinTinTin & db);
@@ -212,37 +203,43 @@ void to_json(nlohmann::json & json, RootMotion const& db);
 void to_json(nlohmann::json & json, RinTinTin const& db);
 }
 
+namespace Rhi
+{
+void from_json(const nlohmann::json & json, ComponentMapping & db);
+void to_json(nlohmann::json & json, ComponentMapping const& db);
+}
+
 namespace Extensions
 {
 
 void to_json(nlohmann::json & json, Animation const& db)
 {
-	fx::gltf::detail::WriteField("LF_root_motion", json, db.lf_rootMotion);
+	fx::gltf::detail::WriteField("KRE_root_motion", json, db.lf_rootMotion);
 }
 
 void from_json(const nlohmann::json & json, Animation & db)
 {
-	fx::gltf::detail::ReadOptionalField("LF_root_motion", json, db.lf_rootMotion);
+	fx::gltf::detail::ReadOptionalField("KRE_root_motion", json, db.lf_rootMotion);
 }
 
 void to_json(nlohmann::json & json, Image const& db)
 {
-	fx::gltf::detail::WriteField("LF_Compression", json, db.compression);
+	fx::gltf::detail::WriteField("KRE_compression", json, db.compression);
 }
 
 void from_json(const nlohmann::json & json, Image & db)
 {
-	fx::gltf::detail::ReadOptionalField("LF_Compression", json, db.compression);
+	fx::gltf::detail::ReadOptionalField("KRE_compression", json, db.compression);
 }
 
 void to_json(nlohmann::json & json, Sampler const& db)
 {
-	fx::gltf::detail::WriteField("LF_Swizzle", json, db.swizzle, Rhi::ComponentMapping{});
+	fx::gltf::detail::WriteField("KRE_swizzle", json, db.swizzle, Rhi::ComponentMapping{});
 }
 
 void from_json(const nlohmann::json & json, Sampler & db)
 {
-	fx::gltf::detail::ReadOptionalField("LF_Swizzle", json, db.swizzle);
+	fx::gltf::detail::ReadOptionalField("KRE_swizzle", json, db.swizzle);
 }
 
 
@@ -475,7 +472,7 @@ void from_json(const nlohmann::json & json, Primitive & db)
 void to_json(nlohmann::json & json, Node const& db)
 {
 	fx::gltf::detail::WriteField("AGI_articulations", json, db.AGI_articulations);
-	fx::gltf::detail::WriteField("LF_RINTINTIN",      json, db.rintintin);
+	fx::gltf::detail::WriteField("KRE_rintintin",      json, db.rintintin);
 	if(!db.visible)
 		json["KHR_node_visibility"]["visible"] = false;
 
@@ -497,7 +494,7 @@ void to_json(nlohmann::json & json, Node const& db)
 void from_json(const nlohmann::json & json, Node & db)
 {
 	fx::gltf::detail::ReadOptionalField("AGI_articulations", json, db.AGI_articulations);
-	fx::gltf::detail::ReadOptionalField("LF_RINTINTIN",      json, db.rintintin);
+	fx::gltf::detail::ReadOptionalField("KRE_rintintin",      json, db.rintintin);
 	if(auto it = json.find("KHR_node_visibility"); it != json.end())
 		fx::gltf::detail::ReadOptionalField("visible", *it, db.visible);
 
@@ -543,14 +540,14 @@ void from_json(const nlohmann::json & json, Mesh & db)
 
 void to_json(nlohmann::json & json, Texture const& extras)
 {
-	fx::gltf::detail::WriteField("MSFT_texture_dds", json,   extras.dds);
-	fx::gltf::detail::WriteField("LZ4_texture_dds", json,   extras.lz4_dds);
+	fx::gltf::detail::WriteField("KRE_texture_dds", json,   extras.dds);
+	fx::gltf::detail::WriteField("KRE_texture_dds_lz4", json,   extras.lz4_dds);
 }
 
 void from_json(const nlohmann::json & json, Texture & extras)
 {
-	fx::gltf::detail::ReadOptionalField("MSFT_texture_dds", json,   extras.dds);
-	fx::gltf::detail::ReadOptionalField("LZ4_texture_dds", json,   extras.lz4_dds);
+	fx::gltf::detail::ReadOptionalField("KRE_texture_dds", json,   extras.dds);
+	fx::gltf::detail::ReadOptionalField("KRE_texture_dds_lz4", json,   extras.lz4_dds);
 }
 
 void to_json(nlohmann::json & json, Material const& material)
@@ -684,7 +681,7 @@ void from_json(const nlohmann::json & json, Mesh & db)
 
 }
 
-namespace LF
+namespace KRE
 {
 
 static void to_json(nlohmann::json & json, RootMotion::HermiteVec3 const& db)
