@@ -23,18 +23,6 @@ struct texture_dds
 namespace LF
 {
 
-struct Sampler
-{
-	uint16_t             magFilter{9729};
-	uint16_t             minFilter{9729};
-	uint16_t             wrapS{10497};
-	uint16_t             wrapT{10497};
-	uint16_t             wrapR{10497};
-	Rhi::ComponentMapping swizzle{};
-
-	void ApplySettings(uint32_t target, uint32_t noMipMaps) const;
-};
-
 struct texture_cmp
 {
 	short                 bc{-1};
