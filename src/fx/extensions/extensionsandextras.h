@@ -46,9 +46,9 @@ struct Image
 
 struct Sampler
 {
-	LF::Swizzle     swizzle;
+	Rhi::ComponentMapping swizzle;
 
-	bool empty() const { return swizzle.empty(); }
+	bool empty() const { return swizzle == Rhi::ComponentMapping{}; }
 	bool operator==(Sampler const& it) const { return swizzle == it.swizzle; }
 };
 

@@ -1,5 +1,7 @@
 #include "msft_texture_dds.h"
 #include "fx/gltf.h"
+#include <optional>
+#include <string_view>
 
 namespace MSFT
 {
@@ -18,62 +20,100 @@ void from_json(const nlohmann::json & json, texture_dds & db)
 
 }
 
+namespace {
+
+//	One char per output channel, in r,g,b,a order. Upper and lower case are the
+//	same source channel: the mask is a permutation, not a case-sensitive token,
+//	and authored files use both spellings.
+char SwizzleToChar(Rhi::ComponentSwizzle s)
+{
+	switch(s)
+	{
+	case Rhi::ComponentSwizzle::Zero: return '0';
+	case Rhi::ComponentSwizzle::One:  return '1';
+	case Rhi::ComponentSwizzle::R:    return 'r';
+	case Rhi::ComponentSwizzle::G:    return 'g';
+	case Rhi::ComponentSwizzle::B:    return 'b';
+	case Rhi::ComponentSwizzle::A:    return 'a';
+	}
+	return 'r';
+}
+
+//	Returns false for anything outside the alphabet so the caller can report the
+//	offending mask rather than silently substituting a channel.
+bool CharToSwizzle(char c, Rhi::ComponentSwizzle& out)
+{
+	switch(c)
+	{
+	case '0':           out = Rhi::ComponentSwizzle::Zero; return true;
+	case '1':           out = Rhi::ComponentSwizzle::One;  return true;
+	case 'r': case 'R': out = Rhi::ComponentSwizzle::R;    return true;
+	case 'g': case 'G': out = Rhi::ComponentSwizzle::G;    return true;
+	case 'b': case 'B': out = Rhi::ComponentSwizzle::B;    return true;
+	case 'a': case 'A': out = Rhi::ComponentSwizzle::A;    return true;
+	default: return false;
+	}
+}
+
+}  // namespace
+
 namespace LF
 {
 
-static SWIZZLE GetSwizzleValue(char value)
+//	Exposed rather than folded into Rhi::from_json: the sidecar parser needs the
+//	same spelling with a real error on failure, and a second implementation of a
+//	permutation parser is exactly how two spellings drift apart.
+std::optional<Rhi::ComponentMapping> ParseMask(std::string_view mask)
 {
-	switch(value)
-	{
-	case '0': return SWIZZLE::zero;
-	case '1': return SWIZZLE::one;
-	case 'R':
-	case 'r': return SWIZZLE::red;
-	case 'G':
-	case 'g': return SWIZZLE::green;
-	case 'B':
-	case 'b': return SWIZZLE::blue;
-	case 'A':
-	case 'a': return SWIZZLE::alpha;
-	default:
-		throw fx::gltf::invalid_gltf_document("LF_Swizzle.mask must match [01rgbaRGBA]{4}");
-	}
+	std::string s(mask);
 
-	return SWIZZLE::zero;
+	//	3 chars means opaque: alpha is not stored, so it reads as 1.
+	if(s.size() == 3)
+		s.push_back('1');
+
+	if(s.size() != 4)
+		return std::nullopt;
+
+	Rhi::ComponentMapping out;
+	if(!CharToSwizzle(s[0], out.r) || !CharToSwizzle(s[1], out.g)
+	|| !CharToSwizzle(s[2], out.b) || !CharToSwizzle(s[3], out.a))
+		return std::nullopt;
+
+	return out;
 }
 
-void to_json(nlohmann::json & json, Swizzle const& db)
+}  // namespace LF
+
+// to_json/from_json for Rhi::ComponentMapping live in Rhi's own namespace -- ADL
+// resolves them from that namespace, not from LF, since ComponentMapping is a
+// Rhi type. LF::texture_cmp::swizzle serializes through these transitively.
+namespace Rhi
 {
-	static const char GetCharValue[6] = {'0', '1', 'r', 'g', 'b', 'a'};
 
-	std::string mask("\0", 4);
-
-	mask[0] = GetCharValue[(int)db.r % 6];
-	mask[1] = GetCharValue[(int)db.g % 6];
-	mask[2] = GetCharValue[(int)db.b % 6];
-	mask[3] = GetCharValue[(int)db.a % 6];
-
-	fx::gltf::detail::WriteField("mask", json, mask);
+void to_json(nlohmann::json& json, ComponentMapping const& db)
+{
+	char buf[5] = { SwizzleToChar(db.r), SwizzleToChar(db.g),
+	                SwizzleToChar(db.b), SwizzleToChar(db.a), 0 };
+	json = std::string(buf);
 }
 
-void from_json(const nlohmann::json & json, Swizzle & db)
+void from_json(nlohmann::json const& json, ComponentMapping& db)
 {
-	std::string mask;
-	fx::gltf::detail::ReadRequiredField("mask", json, mask);
-
-	if(mask.size() != 4)
-		throw fx::gltf::invalid_gltf_document("LF_Swizzle.mask must match [01rgbaRGBA]{4}");
-
-	db.r = GetSwizzleValue(mask[0]);
-	db.g = GetSwizzleValue(mask[1]);
-	db.b = GetSwizzleValue(mask[2]);
-	db.a = GetSwizzleValue(mask[3]);
+	//	A malformed mask keeps the identity rather than guessing which channels
+	//	the author meant. The repackager rejects the file before it can be
+	//	written this way; reaching here means a hand-edited asset.
+	db = LF::ParseMask(json.get<std::string>()).value_or(ComponentMapping{});
 }
+
+}  // namespace Rhi
+
+namespace LF
+{
 
 void to_json(nlohmann::json & json, texture_cmp const& db)
 {
 	fx::gltf::detail::WriteField("bc", json, db.bc, (short)-1);
-	fx::gltf::detail::WriteField("swizzle", json, db.swizzle);
+	fx::gltf::detail::WriteField("swizzle", json, db.swizzle, Rhi::ComponentMapping{});
 
 }
 

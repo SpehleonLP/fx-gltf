@@ -195,14 +195,18 @@ void to_json(nlohmann::json & json, texture_dds const& db);
 void from_json(const nlohmann::json & json, texture_dds & db);
 }
 
+namespace Rhi
+{
+void from_json(const nlohmann::json & json, ComponentMapping & db);
+void to_json(nlohmann::json & json, ComponentMapping const& db);
+}
+
 namespace LF
 {
-void from_json(const nlohmann::json & json, Swizzle & db);
 void from_json(const nlohmann::json & json, texture_cmp & db);
 void from_json(const nlohmann::json & json, RootMotion & db);
 void from_json(const nlohmann::json & json, RinTinTin & db);
 
-void to_json(nlohmann::json & json, Swizzle const& db);
 void to_json(nlohmann::json & json, texture_cmp const& db);
 void to_json(nlohmann::json & json, RootMotion const& db);
 void to_json(nlohmann::json & json, RinTinTin const& db);
@@ -233,7 +237,7 @@ void from_json(const nlohmann::json & json, Image & db)
 
 void to_json(nlohmann::json & json, Sampler const& db)
 {
-	fx::gltf::detail::WriteField("LF_Swizzle", json, db.swizzle);
+	fx::gltf::detail::WriteField("LF_Swizzle", json, db.swizzle, Rhi::ComponentMapping{});
 }
 
 void from_json(const nlohmann::json & json, Sampler & db)
