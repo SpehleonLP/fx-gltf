@@ -645,3 +645,25 @@ TEST(EeRoundTrip, KreWinsWhenBothExtensionsArePresent)
 	EXPECT_EQ(ee.textures[0].extensions.dds.storage, KRE::DdsStorage::Lz4)
 		<< "the subtype was lost, which is the whole point of keeping ours";
 }
+
+//	The mime half of the round trip, and the half no other test reaches. The
+//	extension read path hardcodes Raw for MSFT_texture_dds, so it stays green even
+//	if StorageFromMime forgets the spelling -- but the engine's own load path
+//	(Spehleon/lib/gltf/RhiData/gltf_imagesource.h) classifies the payload from the
+//	image's mimeType alone. Forget it there and our own emitted file stops being
+//	recognised as a DDS at all.
+TEST(ExtensionNames, TheStandardDdsMimeIsReadAsRawStorage)
+{
+	auto raw = KRE::StorageFromMime(KRE::kMsftDdsMime);
+	ASSERT_TRUE(raw.has_value()) << KRE::kMsftDdsMime << " is not recognised as a dds mime";
+	EXPECT_EQ(*raw, KRE::DdsStorage::Raw);
+
+	//	Our own spellings must keep their subtypes -- a fix that mapped every dds
+	//	mime to Raw would satisfy the assert above and silently lose the packing.
+	for(auto s : { KRE::DdsStorage::Raw, KRE::DdsStorage::Lz4, KRE::DdsStorage::DeinterleavedLz4 })
+	{
+		auto back = KRE::StorageFromMime(KRE::MimeForStorage(s));
+		ASSERT_TRUE(back.has_value()) << "storage " << (int)s;
+		EXPECT_EQ(*back, s) << "storage " << (int)s;
+	}
+}
