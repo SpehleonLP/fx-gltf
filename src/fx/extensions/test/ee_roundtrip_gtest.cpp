@@ -414,6 +414,14 @@ TEST(ExtensionNames, EveryInHouseNameIsWrittenAndRecognized)
 	for(auto const* name : kInHouse)
 		EXPECT_TRUE(fx::IsFamiliarExtension(name)) << name;
 
+	//	NOT in-house and NOT retired: a third-party standard we read and write on
+	//	purpose. It was collateral damage of the rename -- our extension used to
+	//	live in msft_texture_dds.cpp, so renaming the file moved the parsed key and
+	//	this list filed the standard name with our own dead spellings. A texture
+	//	using none of our additions is written under this name precisely so a stock
+	//	viewer can open the asset.
+	EXPECT_TRUE(fx::IsFamiliarExtension("MSFT_texture_dds"));
+
 	//	The old spellings must be gone, not merely superseded: a tolerated read
 	//	is exactly what this branch removed. The KRE_ spellings here were live
 	//	names in this same codebase, so a re-added allow-list entry is the
@@ -421,7 +429,9 @@ TEST(ExtensionNames, EveryInHouseNameIsWrittenAndRecognized)
 	static char const* kRetired[] = {
 		"LF_animRoot", "LF_root_motion", "LF_RINTINTIN", "LF_colliders",
 		"LF_compression", "LF_Compression", "LF_alternate",
-		"LF_swizzle", "LF_Swizzle", "MSFT_texture_dds", "LZ4_texture_dds",
+		//	LZ4_texture_dds was OURS and stays retired; MSFT_texture_dds is not
+		//	ours to retire and is asserted familiar above.
+		"LF_swizzle", "LF_Swizzle", "LZ4_texture_dds",
 		"KRE_texture_dds_lz4",
 		"KRE_colliders", "KRE_compression", "KRE_alternate", "KRE_swizzle",
 	};
@@ -529,9 +539,17 @@ TEST(EeRoundTrip, ExplicitIdentitySwizzleSurvivesTheWire)
 		<< "an authored identity must be WRITTEN, not defaulted away: " << t0.dump();
 	EXPECT_EQ(t0["KRE_texture_dds"]["swizzle"].get<std::string>(), "rgba");
 
+	//	Texture 1 authored nothing, so it is a plain dds and is written under the
+	//	STANDARD name -- which is a sharper statement of the same fact this leg has
+	//	always made: MSFT_texture_dds has no swizzle field at all, so an absent mask
+	//	cannot come back engaged. Asserting KRE_texture_dds here would now be
+	//	asserting that we ask a viewer to require an extension for a texture that
+	//	needs nothing from it.
 	auto& t1 = doc.textures[1].extensionsAndExtras["extensions"];
-	ASSERT_EQ(t1.count("KRE_texture_dds"), 1u) << t1.dump();
-	EXPECT_EQ(t1["KRE_texture_dds"].count("swizzle"), 0u)
+	ASSERT_EQ(t1.count("MSFT_texture_dds"), 1u) << t1.dump();
+	EXPECT_EQ(t1.count("KRE_texture_dds"), 0u)
+		<< "a maskless Raw texture must not drag our extension into the file";
+	EXPECT_EQ(t1["MSFT_texture_dds"].count("swizzle"), 0u)
 		<< "an absent mask must stay absent, or every legacy asset gains one";
 
 	//	Through the real serialize path, not just Pack/Unpack in memory.
@@ -567,4 +585,63 @@ TEST(EeRoundTrip, MalformedSwizzleLeavesTheMaskUnengaged)
 	EXPECT_EQ(ee.textures[0].extensions.dds.source, 0);
 	EXPECT_FALSE(ee.textures[0].extensions.dds.swizzle.has_value())
 		<< "an unparseable mask came back ENGAGED, which suppresses the format remap";
+}
+
+//	A third-party asset carries the standard extension, and it is the strict
+//	subset of ours: a source and nothing else, which is exactly a Raw, maskless
+//	record. The KRE rename retired this reader as collateral -- our extension used
+//	to live in msft_texture_dds.cpp, so renaming the file moved the parsed key too.
+TEST(EeRoundTrip, StandardExtensionIsRead)
+{
+	fx::gltf::Document doc;
+	doc.images.resize(1);
+	doc.textures.resize(1);
+	doc.textures[0].extensionsAndExtras["extensions"]["MSFT_texture_dds"]["source"] = 0;
+
+	fx::ExtensionsAndExtras ee;
+	ee.Unpack(doc);
+
+	ASSERT_EQ(ee.textures.size(), 1u);
+	EXPECT_EQ(ee.textures[0].extensions.dds.source, 0);
+	EXPECT_EQ(ee.textures[0].extensions.dds.storage, KRE::DdsStorage::Raw);
+	EXPECT_FALSE(ee.textures[0].extensions.dds.swizzle.has_value());
+}
+
+//	Out of spec (MSFT_texture_dds is used-not-required, since the core source is
+//	the fallback) but real assets do it, and an unfamiliar REQUIRED extension is
+//	the one case Unpack throws on -- a hard load failure for a file we can read.
+TEST(EeRoundTrip, StandardExtensionInExtensionsRequiredDoesNotThrow)
+{
+	fx::gltf::Document doc;
+	doc.images.resize(1);
+	doc.textures.resize(1);
+	doc.textures[0].extensionsAndExtras["extensions"]["MSFT_texture_dds"]["source"] = 0;
+	doc.extensionsRequired.push_back("MSFT_texture_dds");
+
+	fx::ExtensionsAndExtras ee;
+	EXPECT_NO_THROW(ee.Unpack(doc));
+}
+
+//	Both present is a hand-edited or double-cooked file. Ours is the strictly
+//	richer record -- it can express everything the standard one can -- so it wins,
+//	and the conflict is reported rather than resolved in silence.
+TEST(EeRoundTrip, KreWinsWhenBothExtensionsArePresent)
+{
+	fx::gltf::Document doc;
+	doc.images.resize(2);
+	doc.textures.resize(1);
+
+	auto& ext = doc.textures[0].extensionsAndExtras["extensions"];
+	ext["KRE_texture_dds"]["source"]   = 1;
+	ext["KRE_texture_dds"]["storage"]  = "image/dds+lz4";
+	ext["MSFT_texture_dds"]["source"]  = 0;
+
+	fx::ExtensionsAndExtras ee;
+	ee.Unpack(doc);
+
+	ASSERT_EQ(ee.textures.size(), 1u);
+	EXPECT_EQ(ee.textures[0].extensions.dds.source, 1)
+		<< "the MSFT record overwrote the richer one";
+	EXPECT_EQ(ee.textures[0].extensions.dds.storage, KRE::DdsStorage::Lz4)
+		<< "the subtype was lost, which is the whole point of keeping ours";
 }

@@ -1,10 +1,11 @@
 #include "extensionsandextras.h"
+#include <loguru/loguru.hpp>
 
 static const char * g_FamiliarExtensions[] =
 {
 	// in-house / already handled (was g_ExtensionsSupported)
 	"KRE_animRoot", "KRE_root_motion", "KRE_rintintin",
-	"KRE_texture_dds", "MSFT_packing_normalRoughnessMetallic",
+	"KRE_texture_dds", "MSFT_texture_dds", "MSFT_packing_normalRoughnessMetallic",
 	"MSFT_packing_occlusionRoughnessMetallic", "AGI_articulations",
 	"KHR_materials_pbrSpecularGlossiness", "KHR_materials_unlit", "KHR_materials_sheen",
 	"KHR_mesh_quantization", "KHR_texture_transform",
@@ -513,17 +514,46 @@ void from_json(const nlohmann::json & json, Mesh & db)
 
 void to_json(nlohmann::json & json, Texture const& extras)
 {
-	fx::gltf::detail::WriteField("KRE_texture_dds", json, extras.dds);
+	//	A dds using none of our additions IS an MSFT_texture_dds, so it is written
+	//	as one -- that is what keeps KRE_texture_dds out of extensionsRequired and
+	//	lets a stock viewer open the asset. The choice is per-texture and does not
+	//	depend on the output encoding.
+	if(extras.dds.IsPlainDds())
+		json["MSFT_texture_dds"] = ToMsftTextureDds(extras.dds.source);
+	else
+		fx::gltf::detail::WriteField("KRE_texture_dds", json, extras.dds);
 }
 
 void from_json(const nlohmann::json & json, Texture & extras)
 {
 	fx::gltf::detail::ReadOptionalField("KRE_texture_dds", json, extras.dds);
+
+	//	Third-party assets (and our own downgraded output) carry the standard
+	//	extension. It is the strict subset: a source and nothing else, which is
+	//	exactly a Raw, maskless record.
+	auto msft = json.find("MSFT_texture_dds");
+
+	if(msft == json.end())
+		return;
+
+	if(!extras.dds.empty())
+	{
+		//	WARNING, never ERROR/FATAL -- those terminate the engine. The richer
+		//	record wins because it can express everything the other one can.
+		LOG_F(WARNING, "texture carries both KRE_texture_dds and MSFT_texture_dds; "
+		      "keeping KRE_texture_dds (source %d) and ignoring the MSFT one",
+		      extras.dds.source);
+		return;
+	}
+
+	fx::gltf::detail::ReadRequiredField("source", *msft, extras.dds.source);
+	extras.dds.storage          = KRE::DdsStorage::Raw;
+	extras.dds.uncompressedSize = 0;
+	extras.dds.swizzle.reset();
 }
 
-// json-output-only: the standard extension carries `source` and nothing else
-// -- no subtype, no swizzle -- so it does not route through to_json(Texture)
-// above, which always names KRE_texture_dds.
+// The standard extension carries `source` and nothing else -- no subtype, no
+// swizzle -- so it does not route through texture_dds's to_json.
 nlohmann::json ToMsftTextureDds(int32_t source)
 {
 	nlohmann::json json;

@@ -17,6 +17,11 @@ enum class DdsStorage : uint8_t { Raw, Lz4, DeinterleavedLz4 };
 char const* MimeForStorage(DdsStorage);
 std::optional<DdsStorage> StorageFromMime(std::string_view mime);
 
+// MSFT_texture_dds's README names the referenced image's mimeType with its own
+// spelling, not ours. We emit it for textures we downgrade, so we must read it
+// back -- without this the round-trip through our own output loses the storage.
+constexpr char const* kMsftDdsMime = "image/vnd-ms.dds";
+
 struct texture_dds
 {
 	int32_t                source{-1};
@@ -31,6 +36,16 @@ struct texture_dds
 	std::optional<Rhi::ComponentMapping> swizzle;
 
 	bool empty() const { return source == -1; }
+
+	//	MSFT_texture_dds is a strict subset of this record: a source index and
+	//	nothing else. A texture using none of our additions IS one, and is written
+	//	as one so a stock viewer can open the asset without being asked to require
+	//	an extension it has never heard of. BC block compression inside the DDS is
+	//	deliberately NOT a disqualifier -- carrying BC is what DDS is for.
+	bool IsPlainDds() const
+	{
+		return source >= 0 && storage == DdsStorage::Raw && !swizzle.has_value();
+	}
 	bool operator==(texture_dds const& it) const
 	{
 		return source == it.source && uncompressedSize == it.uncompressedSize

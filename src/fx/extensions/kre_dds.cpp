@@ -21,6 +21,9 @@ char const* MimeForStorage(DdsStorage storage)
 std::optional<DdsStorage> StorageFromMime(std::string_view mime)
 {
 	if(mime == "image/dds")      return DdsStorage::Raw;
+	//	Our own downgraded output names the image with MSFT's spelling; both denote
+	//	a plain DDS, so this is the same storage under a different name.
+	if(mime == kMsftDdsMime)     return DdsStorage::Raw;
 	if(mime == "image/dds+lz4")  return DdsStorage::Lz4;
 	if(mime == "image/dds+lz4x") return DdsStorage::DeinterleavedLz4;
 	return std::nullopt;
