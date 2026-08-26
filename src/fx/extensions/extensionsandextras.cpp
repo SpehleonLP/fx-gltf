@@ -5,7 +5,7 @@ static const char * g_FamiliarExtensions[] =
 {
 	// in-house / already handled (was g_ExtensionsSupported)
 	"KRE_animRoot", "KRE_root_motion", "KRE_rintintin",
-	"KRE_texture_dds", "MSFT_texture_dds", "MSFT_packing_normalRoughnessMetallic",
+	"KRE_texture_dds", "KRE_materials_lobes", "MSFT_texture_dds", "MSFT_packing_normalRoughnessMetallic",
 	"MSFT_packing_occlusionRoughnessMetallic", "AGI_articulations",
 	"KHR_materials_pbrSpecularGlossiness", "KHR_materials_unlit", "KHR_materials_sheen",
 	"KHR_mesh_quantization", "KHR_texture_transform",
@@ -577,6 +577,7 @@ void to_json(nlohmann::json & json, Material const& material)
 	fx::gltf::detail::WriteField("KHR_materials_transmission", json, material.transmission);
 	fx::gltf::detail::WriteField("KHR_materials_volume", json, material.volume);
 	fx::gltf::detail::WriteField("KHR_materials_diffuse_transmission", json, material.diffuseTransmission);
+	fx::gltf::detail::WriteField("KRE_materials_lobes", json, material.lobes);
 
 	if(material.emissiveStrength != 1.f)
 		json["KHR_materials_emissive_strength"]["emissiveStrength"] = material.emissiveStrength;
@@ -599,6 +600,7 @@ void from_json(const nlohmann::json & json, Material & material)
 	fx::gltf::detail::ReadOptionalField("KHR_materials_transmission", json, material.transmission);
 	fx::gltf::detail::ReadOptionalField("KHR_materials_volume", json, material.volume);
 	fx::gltf::detail::ReadOptionalField("KHR_materials_diffuse_transmission", json, material.diffuseTransmission);
+	fx::gltf::detail::ReadOptionalField("KRE_materials_lobes", json, material.lobes);
 
 	if(auto it = json.find("KHR_materials_emissive_strength"); it != json.end())
 		fx::gltf::detail::ReadOptionalField("emissiveStrength", *it, material.emissiveStrength);

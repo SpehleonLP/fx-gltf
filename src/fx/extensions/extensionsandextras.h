@@ -3,6 +3,7 @@
 #include "agi_articulation.h"
 #include "kre_dds.h"
 #include "khr_materials.h"
+#include "kre_materials_lobes.h"
 #include "kre_rintintin.h"
 #include "kre_root_motion.h"
 #include <fx/gltf.h>
@@ -59,16 +60,17 @@ struct Material
 	KHR::materials::transmission         transmission;
 	KHR::materials::volume               volume;
 	KHR::materials::diffuse_transmission diffuseTransmission;
+	KRE::materials::lobes                lobes;
 
 	float emissiveStrength{1.f};
 	float ior{1.5f};
 	float dispersion{0.f};	// KHR_materials_dispersion, round-trip only
 
 	bool empty() const { return pbrSpecularGlossiness.empty() && unlit.empty() && clearcoat.empty() && sheen.empty() && specular.empty()
-		&& anisotropy.empty() && iridescence.empty() && transmission.empty() && volume.empty() && diffuseTransmission.empty()
+		&& anisotropy.empty() && iridescence.empty() && transmission.empty() && volume.empty() && diffuseTransmission.empty() && lobes.empty()
 		&& emissiveStrength == 1.f && ior == 1.5f && dispersion == 0.f; }
 	bool operator==(Material const& it) const { return pbrSpecularGlossiness == it.pbrSpecularGlossiness && unlit == it.unlit && clearcoat == it.clearcoat && sheen == it.sheen && specular == it.specular
-		&& anisotropy == it.anisotropy && iridescence == it.iridescence && transmission == it.transmission && volume == it.volume && diffuseTransmission == it.diffuseTransmission
+		&& anisotropy == it.anisotropy && iridescence == it.iridescence && transmission == it.transmission && volume == it.volume && diffuseTransmission == it.diffuseTransmission && lobes == it.lobes
 		&& emissiveStrength == it.emissiveStrength && ior == it.ior && dispersion == it.dispersion; }
 };
 
