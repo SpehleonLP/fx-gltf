@@ -53,13 +53,23 @@ struct Material
 
 	KHR::materials::unlit unlit;
 
+	// round-trip only (no engine semantics yet)
+	KHR::materials::anisotropy           anisotropy;
+	KHR::materials::iridescence          iridescence;
+	KHR::materials::transmission         transmission;
+	KHR::materials::volume               volume;
+	KHR::materials::diffuse_transmission diffuseTransmission;
+
 	float emissiveStrength{1.f};
 	float ior{1.5f};
+	float dispersion{0.f};	// KHR_materials_dispersion, round-trip only
 
 	bool empty() const { return pbrSpecularGlossiness.empty() && unlit.empty() && clearcoat.empty() && sheen.empty() && specular.empty()
-		&& emissiveStrength == 1.f && ior == 1.5f; }
+		&& anisotropy.empty() && iridescence.empty() && transmission.empty() && volume.empty() && diffuseTransmission.empty()
+		&& emissiveStrength == 1.f && ior == 1.5f && dispersion == 0.f; }
 	bool operator==(Material const& it) const { return pbrSpecularGlossiness == it.pbrSpecularGlossiness && unlit == it.unlit && clearcoat == it.clearcoat && sheen == it.sheen && specular == it.specular
-		&& emissiveStrength == it.emissiveStrength && ior == it.ior; }
+		&& anisotropy == it.anisotropy && iridescence == it.iridescence && transmission == it.transmission && volume == it.volume && diffuseTransmission == it.diffuseTransmission
+		&& emissiveStrength == it.emissiveStrength && ior == it.ior && dispersion == it.dispersion; }
 };
 
 struct Mesh

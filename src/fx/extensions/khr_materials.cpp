@@ -70,9 +70,12 @@ void KHR::materials::from_json(nlohmann::json const& json, pbrSpecularGlossiness
 }
 
 
-void KHR::materials::to_json(nlohmann::json & , unlit const& ) { }
+// An extension with every field at its default still owns an OBJECT in the
+// file: a null-valued key is a schema violation strict loaders reject.
+void KHR::materials::to_json(nlohmann::json & json, unlit const& ) { json = nlohmann::json::object(); }
 void KHR::materials::to_json(nlohmann::json & json, pbrSpecularGlossiness const& material)
 {
+	json = nlohmann::json::object();   // see unlit: all-default must still be {}
 	_WriteField(diffuseTexture);
 	_WriteField(specularFactor);
 	_WriteFieldF(glossinessFactor, 1.f);
@@ -92,6 +95,7 @@ void KHR::materials::from_json(nlohmann::json const& json, clearcoat & material)
 
 void KHR::materials::to_json(nlohmann::json & json, clearcoat const& material)
 {
+	json = nlohmann::json::object();   // see unlit: all-default must still be {}
 	_WriteFieldF(clearcoatFactor, 0.f);
 	_WriteFieldF(clearcoatRoughnessFactor, 0.f);
 	_WriteField(clearcoatTexture);
@@ -111,6 +115,7 @@ void KHR::materials::from_json(nlohmann::json const& json, sheen & material)
 
 void KHR::materials::to_json(nlohmann::json & json, sheen const& material)
 {
+	json = nlohmann::json::object();   // see unlit: all-default must still be {}
 	_WriteFieldF(sheenColorFactor, fx::gltf::defaults::NullVec3);
 	_WriteFieldF(sheenRoughnessFactor, 0.f);
 	_WriteField(sheenColorTexture);
@@ -132,10 +137,139 @@ void KHR::materials::from_json(nlohmann::json const& json, specular & material)
 
 void KHR::materials::to_json(nlohmann::json & json, specular const& material)
 {
+	json = nlohmann::json::object();   // see unlit: all-default must still be {}
 	fx::gltf::detail::WriteField("specularFactor", json, material.factor, 1.f);
 	fx::gltf::detail::WriteField("specularColorFactor", json, material.colorFactor, fx::gltf::defaults::IdentityVec3);
 	fx::gltf::detail::WriteField("specularTexture", json, material.texture);
 	fx::gltf::detail::WriteField("specularColorTexture", json, material.colorTexture);
+}
+
+bool KHR::materials::anisotropy::operator==(const anisotropy & b) const
+{
+	return anisotropyStrength == b.anisotropyStrength
+		&& anisotropyRotation == b.anisotropyRotation
+		&& anisotropyTexture  == b.anisotropyTexture;
+}
+
+bool KHR::materials::iridescence::operator==(const iridescence & b) const
+{
+	return iridescenceFactor           == b.iridescenceFactor
+		&& iridescenceIor              == b.iridescenceIor
+		&& iridescenceThicknessMinimum == b.iridescenceThicknessMinimum
+		&& iridescenceThicknessMaximum == b.iridescenceThicknessMaximum
+		&& iridescenceTexture          == b.iridescenceTexture
+		&& iridescenceThicknessTexture == b.iridescenceThicknessTexture;
+}
+
+bool KHR::materials::transmission::operator==(const transmission & b) const
+{
+	return transmissionFactor  == b.transmissionFactor
+		&& transmissionTexture == b.transmissionTexture;
+}
+
+bool KHR::materials::volume::operator==(const volume & b) const
+{
+	return thicknessFactor     == b.thicknessFactor
+		&& thicknessTexture    == b.thicknessTexture
+		&& attenuationDistance == b.attenuationDistance
+		&& attenuationColor    == b.attenuationColor;
+}
+
+bool KHR::materials::diffuse_transmission::operator==(const diffuse_transmission & b) const
+{
+	return diffuseTransmissionFactor       == b.diffuseTransmissionFactor
+		&& diffuseTransmissionTexture      == b.diffuseTransmissionTexture
+		&& diffuseTransmissionColorFactor  == b.diffuseTransmissionColorFactor
+		&& diffuseTransmissionColorTexture == b.diffuseTransmissionColorTexture;
+}
+
+void KHR::materials::from_json(nlohmann::json const& json, anisotropy & material)
+{
+	ReadOptField(anisotropyStrength);
+	ReadOptField(anisotropyRotation);
+	ReadOptField(anisotropyTexture);
+	material.is_empty = false;
+}
+
+void KHR::materials::to_json(nlohmann::json & json, anisotropy const& material)
+{
+	json = nlohmann::json::object();   // see unlit: all-default must still be {}
+	_WriteFieldF(anisotropyStrength, 0.f);
+	_WriteFieldF(anisotropyRotation, 0.f);
+	_WriteField(anisotropyTexture);
+}
+
+void KHR::materials::from_json(nlohmann::json const& json, iridescence & material)
+{
+	ReadOptField(iridescenceFactor);
+	ReadOptField(iridescenceIor);
+	ReadOptField(iridescenceThicknessMinimum);
+	ReadOptField(iridescenceThicknessMaximum);
+	ReadOptField(iridescenceTexture);
+	ReadOptField(iridescenceThicknessTexture);
+	material.is_empty = false;
+}
+
+void KHR::materials::to_json(nlohmann::json & json, iridescence const& material)
+{
+	json = nlohmann::json::object();   // see unlit: all-default must still be {}
+	_WriteFieldF(iridescenceFactor, 0.f);
+	_WriteFieldF(iridescenceIor, 1.3f);
+	_WriteFieldF(iridescenceThicknessMinimum, 100.f);
+	_WriteFieldF(iridescenceThicknessMaximum, 400.f);
+	_WriteField(iridescenceTexture);
+	_WriteField(iridescenceThicknessTexture);
+}
+
+void KHR::materials::from_json(nlohmann::json const& json, transmission & material)
+{
+	ReadOptField(transmissionFactor);
+	ReadOptField(transmissionTexture);
+	material.is_empty = false;
+}
+
+void KHR::materials::to_json(nlohmann::json & json, transmission const& material)
+{
+	json = nlohmann::json::object();   // see unlit: all-default must still be {}
+	_WriteFieldF(transmissionFactor, 0.f);
+	_WriteField(transmissionTexture);
+}
+
+void KHR::materials::from_json(nlohmann::json const& json, volume & material)
+{
+	ReadOptField(thicknessFactor);
+	ReadOptField(thicknessTexture);
+	ReadOptField(attenuationDistance);
+	ReadOptField(attenuationColor);
+	material.is_empty = false;
+}
+
+void KHR::materials::to_json(nlohmann::json & json, volume const& material)
+{
+	json = nlohmann::json::object();   // see unlit: all-default must still be {}
+	_WriteFieldF(thicknessFactor, 0.f);
+	_WriteField(thicknessTexture);
+	// inf == inf, so the default-compare omits the infinite (spec-default) case.
+	_WriteFieldF(attenuationDistance, std::numeric_limits<float>::infinity());
+	_WriteFieldF(attenuationColor, fx::gltf::defaults::IdentityVec3);
+}
+
+void KHR::materials::from_json(nlohmann::json const& json, diffuse_transmission & material)
+{
+	ReadOptField(diffuseTransmissionFactor);
+	ReadOptField(diffuseTransmissionTexture);
+	ReadOptField(diffuseTransmissionColorFactor);
+	ReadOptField(diffuseTransmissionColorTexture);
+	material.is_empty = false;
+}
+
+void KHR::materials::to_json(nlohmann::json & json, diffuse_transmission const& material)
+{
+	json = nlohmann::json::object();   // see unlit: all-default must still be {}
+	_WriteFieldF(diffuseTransmissionFactor, 0.f);
+	_WriteField(diffuseTransmissionTexture);
+	_WriteFieldF(diffuseTransmissionColorFactor, fx::gltf::defaults::IdentityVec3);
+	_WriteField(diffuseTransmissionColorTexture);
 }
 
 void KHR::Texture::from_json(nlohmann::json const& json, Transform & material)

@@ -15,6 +15,9 @@ static const char * g_FamiliarExtensions[] =
 	"KHR_materials_emissive_strength", "KHR_materials_ior", "KHR_node_visibility",
 	"KHR_materials_specular", "EXT_mesh_gpu_instancing", "KHR_lights_punctual",
 	"KHR_materials_variants", "MSFT_lod", "EXT_lights_image_based", "KHR_animation_pointer",
+	// round-trip only (no engine semantics yet)
+	"KHR_materials_anisotropy", "KHR_materials_iridescence", "KHR_materials_transmission",
+	"KHR_materials_volume", "KHR_materials_dispersion", "KHR_materials_diffuse_transmission",
 	""
 };
 
@@ -569,11 +572,18 @@ void to_json(nlohmann::json & json, Material const& material)
 	fx::gltf::detail::WriteField("KHR_materials_clearcoat", json, material.clearcoat);
 	fx::gltf::detail::WriteField("KHR_materials_sheen", json, material.sheen);
 	fx::gltf::detail::WriteField("KHR_materials_specular", json, material.specular);
+	fx::gltf::detail::WriteField("KHR_materials_anisotropy", json, material.anisotropy);
+	fx::gltf::detail::WriteField("KHR_materials_iridescence", json, material.iridescence);
+	fx::gltf::detail::WriteField("KHR_materials_transmission", json, material.transmission);
+	fx::gltf::detail::WriteField("KHR_materials_volume", json, material.volume);
+	fx::gltf::detail::WriteField("KHR_materials_diffuse_transmission", json, material.diffuseTransmission);
 
 	if(material.emissiveStrength != 1.f)
 		json["KHR_materials_emissive_strength"]["emissiveStrength"] = material.emissiveStrength;
 	if(material.ior != 1.5f)
 		json["KHR_materials_ior"]["ior"] = material.ior;
+	if(material.dispersion != 0.f)
+		json["KHR_materials_dispersion"]["dispersion"] = material.dispersion;
 }
 
 void from_json(const nlohmann::json & json, Material & material)
@@ -584,11 +594,18 @@ void from_json(const nlohmann::json & json, Material & material)
 	fx::gltf::detail::ReadOptionalField("KHR_materials_clearcoat", json, material.clearcoat);
 	fx::gltf::detail::ReadOptionalField("KHR_materials_sheen", json, material.sheen);
 	fx::gltf::detail::ReadOptionalField("KHR_materials_specular", json, material.specular);
+	fx::gltf::detail::ReadOptionalField("KHR_materials_anisotropy", json, material.anisotropy);
+	fx::gltf::detail::ReadOptionalField("KHR_materials_iridescence", json, material.iridescence);
+	fx::gltf::detail::ReadOptionalField("KHR_materials_transmission", json, material.transmission);
+	fx::gltf::detail::ReadOptionalField("KHR_materials_volume", json, material.volume);
+	fx::gltf::detail::ReadOptionalField("KHR_materials_diffuse_transmission", json, material.diffuseTransmission);
 
 	if(auto it = json.find("KHR_materials_emissive_strength"); it != json.end())
 		fx::gltf::detail::ReadOptionalField("emissiveStrength", *it, material.emissiveStrength);
 	if(auto it = json.find("KHR_materials_ior"); it != json.end())
 		fx::gltf::detail::ReadOptionalField("ior", *it, material.ior);
+	if(auto it = json.find("KHR_materials_dispersion"); it != json.end())
+		fx::gltf::detail::ReadOptionalField("dispersion", *it, material.dispersion);
 }
 
 }

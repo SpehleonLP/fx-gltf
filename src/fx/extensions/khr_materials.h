@@ -1,6 +1,7 @@
 #ifndef KHR_MATERIALS_H
 #define KHR_MATERIALS_H
 #include <fx/gltf.h>
+#include <limits>
 
 #define KHR_SHEEN 1
 
@@ -94,6 +95,81 @@ typedef fx::gltf::Material::NormalTexture NormalTexture;
 
 	void from_json(nlohmann::json const& json, specular & material);
 	void to_json(nlohmann::json & json, specular const& material);
+
+	// Round-trip only (no engine semantics yet): these exist so the cook
+	// preserves the extension instead of scrubbing it as unfamiliar, and so GC
+	// keeps their texture indices live. Field names/defaults follow the KHR specs.
+	struct anisotropy
+	{
+		float    anisotropyStrength{0.f};
+		float    anisotropyRotation{0.f};
+		Texture  anisotropyTexture;
+
+		bool     is_empty{true};
+		bool empty() const noexcept { return is_empty; }
+		bool operator==(const anisotropy & b) const;
+	};
+
+	struct iridescence
+	{
+		float    iridescenceFactor{0.f};
+		float    iridescenceIor{1.3f};
+		float    iridescenceThicknessMinimum{100.f};
+		float    iridescenceThicknessMaximum{400.f};
+		Texture  iridescenceTexture;
+		Texture  iridescenceThicknessTexture;
+
+		bool     is_empty{true};
+		bool empty() const noexcept { return is_empty; }
+		bool operator==(const iridescence & b) const;
+	};
+
+	struct transmission
+	{
+		float    transmissionFactor{0.f};
+		Texture  transmissionTexture;
+
+		bool     is_empty{true};
+		bool empty() const noexcept { return is_empty; }
+		bool operator==(const transmission & b) const;
+	};
+
+	struct volume
+	{
+		float                thicknessFactor{0.f};
+		Texture              thicknessTexture;
+		// Spec default is +infinity (no attenuation); absent on read means
+		// infinite and infinite on write is omitted.
+		float                attenuationDistance{std::numeric_limits<float>::infinity()};
+		std::array<float, 3> attenuationColor{1.f, 1.f, 1.f};
+
+		bool                 is_empty{true};
+		bool empty() const noexcept { return is_empty; }
+		bool operator==(const volume & b) const;
+	};
+
+	struct diffuse_transmission
+	{
+		float                diffuseTransmissionFactor{0.f};
+		Texture              diffuseTransmissionTexture;
+		std::array<float, 3> diffuseTransmissionColorFactor{1.f, 1.f, 1.f};
+		Texture              diffuseTransmissionColorTexture;
+
+		bool                 is_empty{true};
+		bool empty() const noexcept { return is_empty; }
+		bool operator==(const diffuse_transmission & b) const;
+	};
+
+	void from_json(nlohmann::json const& json, anisotropy & material);
+	void to_json(nlohmann::json & json, anisotropy const& material);
+	void from_json(nlohmann::json const& json, iridescence & material);
+	void to_json(nlohmann::json & json, iridescence const& material);
+	void from_json(nlohmann::json const& json, transmission & material);
+	void to_json(nlohmann::json & json, transmission const& material);
+	void from_json(nlohmann::json const& json, volume & material);
+	void to_json(nlohmann::json & json, volume const& material);
+	void from_json(nlohmann::json const& json, diffuse_transmission & material);
+	void to_json(nlohmann::json & json, diffuse_transmission const& material);
 }
 
 namespace Texture
