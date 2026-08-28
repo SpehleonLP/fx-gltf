@@ -1504,7 +1504,9 @@ namespace gltf
 			stream.read((char*)&magic, 4);
 			stream.seekg(pos);
 
-			if(magic == fx::gltf::detail::GLBHeaderMagic)
+			// Both binary framings: a cooked .lf_glb carries the CBOR magic, and
+			// LoadFromBinary already decodes either -- only this dispatch missed it.
+			if(magic == fx::gltf::detail::GLBHeaderMagic || magic == fx::gltf::detail::GLBHeaderMagicCBOR)
 			{
 				auto doc = fx::gltf::LoadFromBinary(stream, documentRootPath);
 				return doc;
