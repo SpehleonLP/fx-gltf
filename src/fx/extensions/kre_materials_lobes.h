@@ -7,7 +7,7 @@
 // The cooked form of sheen and subsurface. Source KHR extensions (sheen,
 // diffuse_transmission, transmission+volume) are rewritten into this at cook
 // and REMOVED from the material; the loader reads lobes from here only.
-// See docs/superpowers/specs/2026-08-25-material-extension-cook-design.md.
+// See docs/superpowers/landed/specs/2026-08-25-material-extension-cook-design.md.
 namespace KRE
 {
 namespace materials
