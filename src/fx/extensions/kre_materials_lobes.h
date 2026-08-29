@@ -35,7 +35,7 @@ struct subsurface_lobe
 	float                weightFactor{0.f};          // 1-weight scales the front diffuse
 	std::array<float, 3> colorFactor{1.f, 1.f, 1.f};
 	float                roughnessFactor{1.f};       // radius == transmitted-lobe roughness
-	Texture              weightTexture;              // .r
+	Texture              weightTexture;              // .a for diffuse_transmission, .r for transmission
 	Texture              colorTexture;               // .rgb
 	Texture              roughnessTexture;           // .g (volume thickness) -- absent for diffuse_transmission
 	SubsurfaceSource     source{SubsurfaceSource::DiffuseTransmission};
