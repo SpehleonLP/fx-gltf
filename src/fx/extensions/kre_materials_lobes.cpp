@@ -15,24 +15,23 @@ static void WarnRetired(char const* spelling)
 	if(warned) return;
 	warned = true;
 	LOG_F(WARNING, "KRE_materials_lobes: cooked asset carries the retired \"%s\"; "
-	               "this loader reads sheen as tint/level/roughnessFactor only, so the "
-	               "lobe is being dropped. Recook the .lf_glb (delete it and re-run the "
-	               "cook) -- KreAssetMigration gates this.", spelling);
+	               "this loader reads sheen as colorFactor/roughnessFactor only, so the "
+	               "lobe is being dropped. Recook the .lf_glb (Engine --cook <source> --force) "
+	               "-- KreAssetMigration gates this.", spelling);
 }
 
 bool sheen_lobe::operator==(sheen_lobe const& b) const
 {
-	return tint == b.tint && level == b.level && roughnessFactor == b.roughnessFactor;
+	return colorFactor == b.colorFactor && roughnessFactor == b.roughnessFactor;
 }
 
 void from_json(nlohmann::json const& json, sheen_lobe & lobe)
 {
-	fx::gltf::detail::ReadOptionalField("tint",            json, lobe.tint);
-	fx::gltf::detail::ReadOptionalField("level",           json, lobe.level);
+	fx::gltf::detail::ReadOptionalField("colorFactor",     json, lobe.colorFactor);
 	fx::gltf::detail::ReadOptionalField("roughnessFactor", json, lobe.roughnessFactor);
 	if(json.is_object())
 	{
-		for(char const* retired : { "colorFactor", "colorTexture", "roughnessTexture" })
+		for(char const* retired : { "tint", "level", "colorTexture", "roughnessTexture" })
 			if(json.find(retired) != json.end())
 				WarnRetired(retired);
 	}
@@ -42,8 +41,8 @@ void from_json(nlohmann::json const& json, sheen_lobe & lobe)
 void to_json(nlohmann::json & json, sheen_lobe const& lobe)
 {
 	json = nlohmann::json::object();   // all-default must still be {}
-	fx::gltf::detail::WriteField("tint",            json, lobe.tint, 0.f);
-	fx::gltf::detail::WriteField("level",           json, lobe.level, 0.f);
+	std::array<float, 3> const black{0.f, 0.f, 0.f};
+	if(lobe.colorFactor != black) json["colorFactor"] = lobe.colorFactor;
 	fx::gltf::detail::WriteField("roughnessFactor", json, lobe.roughnessFactor, 0.f);
 }
 

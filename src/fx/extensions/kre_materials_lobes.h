@@ -1,13 +1,14 @@
 #ifndef KRE_MATERIALS_LOBES_H
 #define KRE_MATERIALS_LOBES_H
 #include <fx/gltf.h>
+#include <array>
 #include <cstdint>
 
 // The cooked form of sheen. KHR_materials_sheen is rewritten into this at cook
 // and REMOVED from the material; the loader reads sheen from here only.
 //
 // Sheen is FACTORS ONLY (spec 2026-08-29-material-lobe-table-design §Rulings):
-// a sheenColorTexture is reduced to tint/level at cook, never carried per pixel.
+// a sheenColorTexture is reduced at cook, never carried per pixel.
 // The subsurface lobe this extension used to carry is gone with it:
 // KHR_materials_diffuse_transmission and KHR_materials_volume are read natively
 // by the loader and pass through the cook untouched.
@@ -17,12 +18,13 @@ namespace materials
 {
 struct sheen_lobe
 {
-	//	sheenColour = mix(vec3(1), baseColor, tint) * level -- the light pass's whole
-	//	view of sheen (unpack_principled.h.glsl). Folded from sheenColorFactor by
-	//	SheenTintLevel (lobe_constants.h), which the cook and the loader share.
-	float tint{0.f};
-	float level{0.f};
-	float roughnessFactor{0.f};
+	//	The light pass's whole view of sheen: a free RGB fuzz colour and a roughness
+	//	(unpack_principled.h.glsl reads them off the LobeConstants row). Free, not a
+	//	baseColor tint: two-tone velvet (pink ground, green pile) is an ordinary fabric,
+	//	so the tint/level fold of 2026-08-29 was retired on 2026-08-30. A texture in
+	//	either KHR slot cooks to its per-channel AVERAGE (convert_materials.cpp).
+	std::array<float, 3> colorFactor{0.f, 0.f, 0.f};
+	float                roughnessFactor{0.f};
 
 	bool is_empty{true};
 	bool empty() const noexcept { return is_empty; }
