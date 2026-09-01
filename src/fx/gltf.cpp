@@ -1597,9 +1597,12 @@ namespace gltf
 				if (useCbor) { cborBytes = nlohmann::json::to_cbor(json); structuralLen = static_cast<uint32_t>(cborBytes.size()); }
 				else         { jsonText  = json.dump();                    structuralLen = static_cast<uint32_t>(jsonText.length()); }
 
-				Buffer const & binBuffer = document.buffers.front();
-				const uint32_t binPaddedLength = ((binBuffer.byteLength + 3) & (~3u));
-				const uint32_t binPadding = binPaddedLength - binBuffer.byteLength;
+				// A structural-only document (no buffers) still saves: the .glb has an
+				// empty BIN chunk rather than indexing a buffer that doesn't exist.
+				const bool     hasBuffer = !document.buffers.empty();
+				const uint32_t binByteLength = hasBuffer ? document.buffers.front().byteLength : 0;
+				const uint32_t binPaddedLength = ((binByteLength + 3) & (~3u));
+				const uint32_t binPadding = binPaddedLength - binByteLength;
 				binHeader.chunkLength = binPaddedLength;
 
 				header.jsonHeader.chunkLength = ((structuralLen + 3) & (~3u));
@@ -1621,7 +1624,11 @@ namespace gltf
 					output.write(&spaces[0], headerPadding);  // JSON pads with spaces (valid whitespace)
 				}
 				output.write(reinterpret_cast<char *>(&binHeader), detail::ChunkHeaderSize);
-				output.write(reinterpret_cast<char const *>(&binBuffer.data[0]), binBuffer.byteLength);
+				if (hasBuffer)
+				{
+					Buffer const & binBuffer = document.buffers.front();
+					output.write(reinterpret_cast<char const *>(&binBuffer.data[0]), binBuffer.byteLength);
+				}
 				output.write(&nulls[0], binPadding);
 
 				externalBufferIndex = 1;
