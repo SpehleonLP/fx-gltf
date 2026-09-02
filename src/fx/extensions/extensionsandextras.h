@@ -274,9 +274,12 @@ struct Node
 	std::string capability;
 	std::vector<float> msftScreencoverage;	// MSFT_lod: per-LOD screen-coverage thresholds
 
-	bool empty() const { return Lifaundi_PartId == -1 && Lifaundi_Parent == -1 && msftScreencoverage.empty(); }
-	bool operator==(Node const& it) const { return Lifaundi_PartId == it.Lifaundi_PartId && Lifaundi_Parent == it.Lifaundi_Parent && msftScreencoverage == it.msftScreencoverage; }
+	bool empty() const { return Lifaundi_PartId == -1 && Lifaundi_Parent == -1 && capability.empty() && msftScreencoverage.empty(); }
+	bool operator==(Node const& it) const { return Lifaundi_PartId == it.Lifaundi_PartId && Lifaundi_Parent == it.Lifaundi_Parent && capability == it.capability && msftScreencoverage == it.msftScreencoverage; }
 };
+
+void to_json(nlohmann::json & , Node const& );
+void from_json(const nlohmann::json & , Node & );
 
 typedef ::Empty Sampler;
 typedef ::Empty Scene;

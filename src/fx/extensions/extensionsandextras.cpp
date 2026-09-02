@@ -31,6 +31,45 @@ bool fx::IsFamiliarExtension(std::string_view name)
 void to_json(nlohmann::json & , Empty const& ) {}
 void from_json(const nlohmann::json & , Empty & ) {}
 
+// Pack MERGES into whatever the document already carries under `key` instead of
+// assigning over it. The typed struct only knows its own fields; a modeler's
+// Blender custom property, or an extension this file has no struct for, has no
+// field to survive in and was silently destroyed by every Unpack/mutate/Pack
+// cycle. Ownership is decided per key: a key the struct READS (probe: re-read
+// the existing object, re-serialise it, see what comes back) is the struct's,
+// and is erased before the fresh value lands -- so a field reset to its default
+// after Unpack really does disappear rather than resurrecting from the old
+// object. Every other key is somebody else's and passes through untouched.
+template<typename TValue>
+static void MergeField(std::string const& key, nlohmann::json & json, TValue const& value)
+{
+	auto existing = json.find(key);
+	if(existing == json.end() || !existing->is_object())
+	{
+		fx::gltf::detail::WriteField(key, json, value);
+		return;
+	}
+
+	nlohmann::json fresh = value;   // to_json; omits fields at their defaults
+	try
+	{
+		TValue probe = existing->get<TValue>();
+		nlohmann::json owned = probe;
+		for(auto it = owned.cbegin(); it != owned.cend(); ++it)
+			existing->erase(it.key());
+	}
+	catch(...)
+	{
+		// The struct could not read the old object at all; nothing there is provably
+		// its own, so nothing is erased and the fresh keys simply overwrite.
+	}
+
+	if(fresh.is_object())
+		existing->update(fresh);
+	if(existing->empty())
+		json.erase(existing);
+}
+
 template<typename S, typename T>
 static void Pack(std::vector<S> & doc, std::vector<T> const& ee)
 {
@@ -38,8 +77,8 @@ static void Pack(std::vector<S> & doc, std::vector<T> const& ee)
 
 	for(size_t i = 0; i < N; ++i)
 	{
-		fx::gltf::detail::WriteField("extensions", doc[i].extensionsAndExtras, ee[i].extensions);
-		fx::gltf::detail::WriteField("extras", doc[i].extensionsAndExtras, ee[i].extras);
+		MergeField("extensions", doc[i].extensionsAndExtras, ee[i].extensions);
+		MergeField("extras", doc[i].extensionsAndExtras, ee[i].extras);
 	}
 }
 
@@ -79,8 +118,8 @@ void fx::ExtensionsAndExtras::Pack(fx::gltf::Document & doc) const
 
 #undef Pack_MACRO
 
-	fx::gltf::detail::WriteField("extensions", doc.extensionsAndExtras, document.extensions);
-	fx::gltf::detail::WriteField("extras", doc.extensionsAndExtras, document.extras);
+	MergeField("extensions", doc.extensionsAndExtras, document.extensions);
+	MergeField("extras", doc.extensionsAndExtras, document.extras);
 
 	// FLATTENED primitive scope (KHR_materials_variants). Primitives are nested
 	// (doc.meshes[m].primitives[p]) with no doc-level array, so we walk them with
@@ -95,8 +134,8 @@ void fx::ExtensionsAndExtras::Pack(fx::gltf::Document & doc) const
 			{
 				if(counter < primitives.size())
 				{
-					fx::gltf::detail::WriteField("extensions", p.extensionsAndExtras, primitives[counter].extensions);
-					fx::gltf::detail::WriteField("extras", p.extensionsAndExtras, primitives[counter].extras);
+					MergeField("extensions", p.extensionsAndExtras, primitives[counter].extensions);
+					MergeField("extras", p.extensionsAndExtras, primitives[counter].extras);
 				}
 				++counter;
 			}
@@ -699,6 +738,8 @@ void to_json(nlohmann::json & json, Node const& db)
 {
 	fx::gltf::detail::WriteField("Lifaundi_PartId", json, db.Lifaundi_PartId, -1);
 	fx::gltf::detail::WriteField("Lifaundi_Parent", json, db.Lifaundi_Parent, -1);
+	// from_json accepts any casing of the key; the canonical spelling is written back.
+	fx::gltf::detail::WriteField("capability", json, db.capability);
 	fx::gltf::detail::WriteField("MSFT_screencoverage", json, db.msftScreencoverage);
 }
 
