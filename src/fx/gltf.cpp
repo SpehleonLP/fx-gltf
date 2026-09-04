@@ -1266,7 +1266,9 @@ namespace gltf
      void to_json(nlohmann::json & json, Mesh const& mesh)
     {
         detail::WriteField("name", json, mesh.name);
-        detail::WriteField("primitives", json, mesh.primitives);
+        //	from_json requires this (ReadRequiredField) -- same asymmetry as
+        //	Animation's channels/samplers.
+        detail::WriteRequiredField("primitives", json, mesh.primitives);
         detail::WriteField("weights", json, mesh.weights);
         detail::WriteExtensions(json, mesh.extensionsAndExtras);
     }
@@ -1288,7 +1290,8 @@ namespace gltf
 
      void to_json(nlohmann::json & json, Primitive const& primitive)
     {
-        detail::WriteField("attributes", json, primitive.attributes);
+        //	from_json requires this (ReadRequiredField) -- same asymmetry.
+        detail::WriteRequiredField("attributes", json, primitive.attributes);
         detail::WriteField("indices", json, primitive.indices, -1);
         detail::WriteField("material", json, primitive.material, -1);
         detail::WriteField("mode", json, primitive.mode, Primitive::Mode::Triangles);
@@ -1326,7 +1329,8 @@ namespace gltf
         detail::WriteField("inverseBindMatrices", json, skin.inverseBindMatrices, -1);
         detail::WriteField("name", json, skin.name);
         detail::WriteField("skeleton", json, skin.skeleton, -1);
-        detail::WriteField("joints", json, skin.joints);
+        //	from_json requires this (ReadRequiredField) -- same asymmetry.
+        detail::WriteRequiredField("joints", json, skin.joints);
         detail::WriteExtensions(json, skin.extensionsAndExtras);
     }
 
