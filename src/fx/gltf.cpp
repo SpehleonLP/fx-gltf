@@ -7,6 +7,7 @@
 // ------------------------------------------------------------
 
 #include <array>
+#include <cmath>
 #include <cstring>
 #include <fstream>
 #include <stdexcept>
@@ -1173,7 +1174,11 @@ namespace gltf
     {
         detail::WriteField("aspectRatio", json, camera.aspectRatio, {});
         detail::WriteRequiredField("yfov", json, camera.yfov);
-        detail::WriteField("zfar", json, camera.zfar, {});
+        //	zfar's unset sentinel is NaN (gltf.h), not 0 -- WriteField's `!=
+        //	defaultValue` is true for NaN against ANY float, so the 4-arg
+        //	form here would always write it (as JSON null); check isnan.
+        if(!std::isnan(camera.zfar))
+            json["zfar"] = camera.zfar;
         detail::WriteRequiredField("znear", json, camera.znear);
         detail::WriteExtensions(json, camera.extensionsAndExtras);
     }
