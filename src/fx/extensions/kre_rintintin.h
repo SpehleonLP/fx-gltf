@@ -15,8 +15,9 @@ struct Transform
 	std::array<float, 3> scaling{1, 1, 1};
 
 	// Disagrees with the sentinel above -- {1,0,0,0} here, {0,0,0,1} there --
-	// so a default-constructed Transform is not empty(). Left alone: changing
-	// it would change cooked bytes.
+	// so a default-constructed Transform is not empty(). Nothing calls it:
+	// to_json goes through WriteOptField, and WriteField's own .empty() test
+	// lands on the enclosing std::vector.
 	inline bool empty() const
 	{ 
 		return scaling == std::array<float, 3>{1.f, 1.f, 1.f} 
