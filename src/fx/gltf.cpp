@@ -997,22 +997,24 @@ namespace gltf
 
      void to_json(nlohmann::json & json, Accessor::Sparse::Values const& values)
     {
-        detail::WriteField("bufferView", json, values.bufferView, static_cast<uint32_t>(-1));
+        //	Sparse-class sweep: from_json requires bufferView here; only the
+        //	default-sentinel VALUE was ever skip-written, never the field.
+        detail::WriteRequiredField("bufferView", json, values.bufferView);
         detail::WriteField("byteOffset", json, values.byteOffset, {});
         detail::WriteExtensions(json, values.extensionsAndExtras);
     }
 
      void to_json(nlohmann::json & json, Accessor::Sparse::Indices const& indices)
     {
-        detail::WriteField("componentType", json, indices.componentType, Accessor::ComponentType::None);
-        detail::WriteField("bufferView", json, indices.bufferView, static_cast<uint32_t>(-1));
+        detail::WriteRequiredField("componentType", json, indices.componentType);
+        detail::WriteRequiredField("bufferView", json, indices.bufferView);
         detail::WriteField("byteOffset", json, indices.byteOffset, {});
         detail::WriteExtensions(json, indices.extensionsAndExtras);
     }
 
      void to_json(nlohmann::json & json, Accessor::Sparse const& sparse)
     {
-        detail::WriteField("count", json, sparse.count, -1);
+        detail::WriteRequiredField("count", json, sparse.count);
         detail::WriteField("indices", json, sparse.indices);
         detail::WriteField("values", json, sparse.values);
         detail::WriteExtensions(json, sparse.extensionsAndExtras);
@@ -1022,14 +1024,14 @@ namespace gltf
     {
         detail::WriteField("bufferView", json, accessor.bufferView, -1);
         detail::WriteField("byteOffset", json, accessor.byteOffset, {});
-        detail::WriteField("componentType", json, accessor.componentType, Accessor::ComponentType::None);
-        detail::WriteField("count", json, accessor.count, {});
+        detail::WriteRequiredField("componentType", json, accessor.componentType);
+        detail::WriteRequiredField("count", json, accessor.count);
         detail::WriteField("max", json, accessor.max);
         detail::WriteField("min", json, accessor.min);
         detail::WriteField("name", json, accessor.name);
         detail::WriteField("normalized", json, accessor.normalized, false);
         detail::WriteField("sparse", json, accessor.sparse);
-        detail::WriteField("type", json, accessor.type, Accessor::Type::None);
+        detail::WriteRequiredField("type", json, accessor.type);
         detail::WriteExtensions(json, accessor.extensionsAndExtras);
     }
 
@@ -1057,13 +1059,13 @@ namespace gltf
 	 void to_json(nlohmann::json & json, Animation::Channel::Target const& animationChannelTarget)
     {
         detail::WriteField("node", json, animationChannelTarget.node, -1);
-		detail::WriteField("path", json, animationChannelTarget.path, Animation::Channel::Target::Path::Undefined);
+		detail::WriteRequiredField("path", json, animationChannelTarget.path);
         detail::WriteExtensions(json, animationChannelTarget.extensionsAndExtras);
     }
 
 	 void to_json(nlohmann::json & json, Animation::Channel const& animationChannel)
     {
-        detail::WriteField("sampler", json, animationChannel.sampler, -1);
+        detail::WriteRequiredField("sampler", json, animationChannel.sampler);
         detail::WriteField("target", json, animationChannel.target);
         detail::WriteExtensions(json, animationChannel.extensionsAndExtras);
     }
@@ -1086,9 +1088,9 @@ namespace gltf
 
 	 void to_json(nlohmann::json & json, Animation::Sampler const& animationSampler)
     {
-        detail::WriteField("input", json, animationSampler.input, -1);
+        detail::WriteRequiredField("input", json, animationSampler.input);
 		detail::WriteField("interpolation", json, animationSampler.interpolation, Animation::Sampler::Type::Linear);
-        detail::WriteField("output", json, animationSampler.output, -1);
+        detail::WriteRequiredField("output", json, animationSampler.output);
         detail::WriteExtensions(json, animationSampler.extensionsAndExtras);
     }
 
@@ -1108,7 +1110,7 @@ namespace gltf
         detail::WriteField("copyright", json, asset.copyright);
         detail::WriteField("generator", json, asset.generator);
         detail::WriteField("minVersion", json, asset.minVersion);
-        detail::WriteField("version", json, asset.version);
+        detail::WriteRequiredField("version", json, asset.version);
         detail::WriteExtensions(json, asset.extensionsAndExtras);
     }
 
@@ -1126,7 +1128,7 @@ namespace gltf
 
      void to_json(nlohmann::json & json, Buffer const& buffer)
     {
-        detail::WriteField("byteLength", json, buffer.byteLength, {});
+        detail::WriteRequiredField("byteLength", json, buffer.byteLength);
         detail::WriteField("name", json, buffer.name);
         detail::WriteField("uri", json, buffer.uri);
         detail::WriteExtensions(json, buffer.extensionsAndExtras);
@@ -1134,8 +1136,8 @@ namespace gltf
 
      void to_json(nlohmann::json & json, BufferView const& bufferView)
     {
-        detail::WriteField("buffer", json, bufferView.buffer, -1);
-        detail::WriteField("byteLength", json, bufferView.byteLength, {});
+        detail::WriteRequiredField("buffer", json, bufferView.buffer);
+        detail::WriteRequiredField("byteLength", json, bufferView.byteLength);
         detail::WriteField("byteOffset", json, bufferView.byteOffset, {});
         detail::WriteField("byteStride", json, bufferView.byteStride, {});
         detail::WriteField("name", json, bufferView.name);
@@ -1160,26 +1162,26 @@ namespace gltf
 
      void to_json(nlohmann::json & json, Camera::Orthographic const& camera)
     {
-        detail::WriteField("xmag", json, camera.xmag, defaults::FloatSentinel);
-        detail::WriteField("ymag", json, camera.ymag, defaults::FloatSentinel);
-        detail::WriteField("zfar", json, camera.zfar, -defaults::FloatSentinel);
-        detail::WriteField("znear", json, camera.znear, -defaults::FloatSentinel);
+        detail::WriteRequiredField("xmag", json, camera.xmag);
+        detail::WriteRequiredField("ymag", json, camera.ymag);
+        detail::WriteRequiredField("zfar", json, camera.zfar);
+        detail::WriteRequiredField("znear", json, camera.znear);
         detail::WriteExtensions(json, camera.extensionsAndExtras);
     }
 
      void to_json(nlohmann::json & json, Camera::Perspective const& camera)
     {
         detail::WriteField("aspectRatio", json, camera.aspectRatio, {});
-        detail::WriteField("yfov", json, camera.yfov, {});
+        detail::WriteRequiredField("yfov", json, camera.yfov);
         detail::WriteField("zfar", json, camera.zfar, {});
-        detail::WriteField("znear", json, camera.znear, {});
+        detail::WriteRequiredField("znear", json, camera.znear);
         detail::WriteExtensions(json, camera.extensionsAndExtras);
     }
 
      void to_json(nlohmann::json & json, Camera const& camera)
     {
         detail::WriteField("name", json, camera.name);
-        detail::WriteField("type", json, camera.type, Camera::Type::None);
+        detail::WriteRequiredField("type", json, camera.type);
         detail::WriteExtensions(json, camera.extensionsAndExtras);
 
         if (camera.type == Camera::Type::Perspective)
