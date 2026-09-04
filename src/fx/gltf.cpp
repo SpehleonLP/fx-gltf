@@ -1094,9 +1094,12 @@ namespace gltf
 
      void to_json(nlohmann::json & json, Animation const& animation)
     {
-        detail::WriteField("channels", json, animation.channels);
+        //	from_json requires both (ReadRequiredField) -- a zero-channel
+        //	animation (an authored rest-pose placeholder) is spec-valid but
+        //	WriteField's skip-if-empty made it unreadable by this same loader.
+        detail::WriteRequiredField("channels", json, animation.channels);
         detail::WriteField("name", json, animation.name);
-        detail::WriteField("samplers", json, animation.samplers);
+        detail::WriteRequiredField("samplers", json, animation.samplers);
         detail::WriteExtensions(json, animation.extensionsAndExtras);
     }
 
