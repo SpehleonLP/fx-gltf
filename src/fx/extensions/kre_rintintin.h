@@ -13,8 +13,11 @@ struct Transform
 	std::array<float, 4> rotation{0, 0, 0, 1};
 	std::array<float, 3> translation{0, 0, 0};
 	std::array<float, 3> scaling{1, 1, 1};
-	
-	inline bool empty() const 
+
+	// Disagrees with the sentinel above -- {1,0,0,0} here, {0,0,0,1} there --
+	// so a default-constructed Transform is not empty(). Left alone: changing
+	// it would change cooked bytes.
+	inline bool empty() const
 	{ 
 		return scaling == std::array<float, 3>{1.f, 1.f, 1.f} 
 		&& translation == std::array<float, 3>{0.f, 0.f, 0.f} 
