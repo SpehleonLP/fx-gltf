@@ -361,9 +361,14 @@ namespace gltf
 						detail::ChunkHeader header;
 	
 						auto binary = dataContext.binaryData;
+						if (uint64_t{dataContext.binaryOffset} + detail::ChunkHeaderSize > binary.size())
+						{
+							throw invalid_gltf_document("Invalid buffer data");
+						}
 						std::memcpy(&header, &binary[dataContext.binaryOffset], detail::ChunkHeaderSize);
 	
-						if (header.chunkType != detail::GLBChunkBIN || header.chunkLength < buffer.byteLength)
+						if (header.chunkType != detail::GLBChunkBIN || header.chunkLength < buffer.byteLength ||
+							uint64_t{dataContext.binaryOffset} + detail::ChunkHeaderSize + header.chunkLength > binary.size())
 						{
 							throw invalid_gltf_document("Invalid buffer data");
 						}
@@ -1418,13 +1423,22 @@ namespace gltf
     {
         try
         {
+            if (binary.size() < detail::HeaderSize)
+            {
+                throw invalid_gltf_document("Invalid GLB header");
+            }
+
             detail::GLBHeader header;
             std::memcpy(&header, &binary[0], detail::HeaderSize);
 
+            // 64-bit sums: a hostile chunkLength near UINT32_MAX must not wrap past
+            // the checks, and header.length is only a claim until held against the
+            // bytes actually read.
             bool const isCbor = (header.magic == detail::GLBHeaderMagicCBOR);
             if ((!isCbor && header.magic != detail::GLBHeaderMagic) ||
                 header.jsonHeader.chunkType != detail::GLBChunkJSON ||
-                header.jsonHeader.chunkLength + detail::HeaderSize > header.length)
+                header.length > binary.size() ||
+                uint64_t{header.jsonHeader.chunkLength} + detail::HeaderSize > header.length)
             {
                 throw invalid_gltf_document("Invalid GLB header");
             }
