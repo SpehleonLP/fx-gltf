@@ -1421,15 +1421,17 @@ namespace gltf
 
     tl::expected<Document, JsonError> LoadFromBinary(std::vector<std::byte>&& binary, std::string const& documentFilePath, bool skip_buffers, ReadQuotas const& readQuotas)
     {
+        // Take ownership now: the caller's file buffer must die when this call returns.
+        std::vector<std::byte> owned = std::move(binary);
         try
         {
-            if (binary.size() < detail::HeaderSize)
+            if (owned.size() < detail::HeaderSize)
             {
                 throw invalid_gltf_document("Invalid GLB header");
             }
 
             detail::GLBHeader header;
-            std::memcpy(&header, &binary[0], detail::HeaderSize);
+            std::memcpy(&header, &owned[0], detail::HeaderSize);
 
             // 64-bit sums: a hostile chunkLength near UINT32_MAX must not wrap past
             // the checks, and header.length is only a claim until held against the
@@ -1437,7 +1439,7 @@ namespace gltf
             bool const isCbor = (header.magic == detail::GLBHeaderMagicCBOR);
             if ((!isCbor && header.magic != detail::GLBHeaderMagic) ||
                 header.jsonHeader.chunkType != detail::GLBChunkJSON ||
-                header.length > binary.size() ||
+                header.length > owned.size() ||
                 uint64_t{header.jsonHeader.chunkLength} + detail::HeaderSize > header.length)
             {
                 throw invalid_gltf_document("Invalid GLB header");
@@ -1451,14 +1453,14 @@ namespace gltf
             // instead of rejecting the trailing pad. (JSON's pad is whitespace, which
             // its parser already ignores.)
             nlohmann::json structural = isCbor
-                ? nlohmann::json::from_cbor(reinterpret_cast<uint8_t const*>(binary.data()) + detail::HeaderSize,
-                                            reinterpret_cast<uint8_t const*>(binary.data()) + detail::HeaderSize + header.jsonHeader.chunkLength,
+                ? nlohmann::json::from_cbor(reinterpret_cast<uint8_t const*>(owned.data()) + detail::HeaderSize,
+                                            reinterpret_cast<uint8_t const*>(owned.data()) + detail::HeaderSize + header.jsonHeader.chunkLength,
                                             /*strict*/ false)
-                : nlohmann::json::parse(std::string_view(reinterpret_cast<char const*>(binary.data()) + detail::HeaderSize, header.jsonHeader.chunkLength));
+                : nlohmann::json::parse(std::string_view(reinterpret_cast<char const*>(owned.data()) + detail::HeaderSize, header.jsonHeader.chunkLength));
 
             auto doc = detail::Create(
                 std::move(structural),
-                { detail::GetDocumentRootPath(documentFilePath), readQuotas, binary, header.jsonHeader.chunkLength + detail::HeaderSize },
+                { detail::GetDocumentRootPath(documentFilePath), readQuotas, owned, header.jsonHeader.chunkLength + detail::HeaderSize },
 				skip_buffers);
 
 			doc.name = documentFilePath;
