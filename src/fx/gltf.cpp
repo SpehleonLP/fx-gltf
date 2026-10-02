@@ -57,7 +57,7 @@ namespace base64
         // clang-format on
     } // namespace detail
 
-     std::string Encode(std::vector<uint8_t> const& bytes)
+     std::string Encode(std::vector<std::byte> const& bytes)
     {
         const std::size_t length = bytes.size();
         if (length == 0)
@@ -70,9 +70,9 @@ namespace base64
 
         uint32_t value = 0;
         int32_t bitCount = -6;
-        for (const uint8_t c : bytes)
+        for (const std::byte b : bytes)
         {
-            value = (value << 8u) + c;
+            value = (value << 8u) + std::to_integer<uint32_t>(b);
             bitCount += 8;
             while (bitCount >= 0)
             {
@@ -97,9 +97,9 @@ namespace base64
     }
 
 #if defined(FX_GLTF_HAS_CPP_17)
-     bool TryDecode(std::string_view in, std::vector<uint8_t> & out)
+     bool TryDecode(std::string_view in, std::vector<std::byte> & out)
 #else
-     bool TryDecode(std::string const& in, std::vector<uint8_t> & out)
+     bool TryDecode(std::string const& in, std::vector<std::byte> & out)
 #endif
     {
         out.clear();
@@ -148,7 +148,7 @@ namespace base64
             if (bitCount >= 0)
             {
                 const uint32_t shiftOperand = bitCount;
-                out.push_back(static_cast<uint8_t>(value >> shiftOperand));
+                out.push_back(static_cast<std::byte>(value >> shiftOperand));
                 bitCount -= 8;
             }
         }
@@ -262,7 +262,7 @@ namespace gltf
             return uri.find(detail::MimetypeImagePNG) == 0 || uri.find(detail::MimetypeImageJPG) == 0;
         }
 
-        void Image::MaterializeData(std::vector<uint8_t> & data) const
+        void Image::MaterializeData(std::vector<std::byte> & data) const
         {
             char const * const mimetype = uri.find(detail::MimetypeImagePNG) == 0 ? detail::MimetypeImagePNG : detail::MimetypeImageJPG;
             const std::size_t startPos = std::char_traits<char>::length(mimetype) + 1;
@@ -1419,7 +1419,7 @@ namespace gltf
         }
 	}
 
-    tl::expected<Document, JsonError> LoadFromBinary(std::vector<uint8_t> binary, std::string const& documentFilePath, bool skip_buffers, ReadQuotas const& readQuotas)
+    tl::expected<Document, JsonError> LoadFromBinary(std::vector<std::byte>&& binary, std::string const& documentFilePath, bool skip_buffers, ReadQuotas const& readQuotas)
     {
         try
         {
@@ -1451,10 +1451,10 @@ namespace gltf
             // instead of rejecting the trailing pad. (JSON's pad is whitespace, which
             // its parser already ignores.)
             nlohmann::json structural = isCbor
-                ? nlohmann::json::from_cbor(binary.begin() + detail::HeaderSize,
-                                            binary.begin() + detail::HeaderSize + header.jsonHeader.chunkLength,
+                ? nlohmann::json::from_cbor(reinterpret_cast<uint8_t const*>(binary.data()) + detail::HeaderSize,
+                                            reinterpret_cast<uint8_t const*>(binary.data()) + detail::HeaderSize + header.jsonHeader.chunkLength,
                                             /*strict*/ false)
-                : nlohmann::json::parse({ &binary[detail::HeaderSize], header.jsonHeader.chunkLength });
+                : nlohmann::json::parse(std::string_view(reinterpret_cast<char const*>(binary.data()) + detail::HeaderSize, header.jsonHeader.chunkLength));
 
             auto doc = detail::Create(
                 std::move(structural),
@@ -1474,7 +1474,7 @@ namespace gltf
 	{
 		try
 		{
-			std::vector<uint8_t> binary{};
+			std::vector<std::byte> binary{};
 			{
 				std::ifstream file(documentFilePath, std::ios::binary);
 				if (!file.is_open())
@@ -1497,7 +1497,7 @@ namespace gltf
 				file.read(reinterpret_cast<char *>(&binary[0]), fileSize);
 			}
 	
-			return LoadFromBinary(binary, documentFilePath, skip_buffers, readQuotas);
+			return LoadFromBinary(std::move(binary), documentFilePath, skip_buffers, readQuotas);
         }
         catch (std::exception & e)
         {
@@ -1573,7 +1573,7 @@ namespace gltf
 	{
 		try
 		{
-			std::vector<uint8_t> binary{};
+			std::vector<std::byte> binary{};
 			{
 				if (input.bad())
 				{
@@ -1595,7 +1595,7 @@ namespace gltf
 				input.read(reinterpret_cast<char *>(&binary[0]), fileSize);
 			}
 	
-			return LoadFromBinary(binary, documentRootPath, false, readQuotas);	
+			return LoadFromBinary(std::move(binary), documentRootPath, false, readQuotas);	
         }
         catch (std::exception & e)
         {

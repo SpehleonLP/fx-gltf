@@ -7,6 +7,7 @@
 
 #include "expected/include/tl/expected.hpp"
 #include <array>
+#include <cstddef>
 #include <cstring>
 #include <optional>
 #include <span>
@@ -420,7 +421,7 @@ namespace gltf
 
         nlohmann::json extensionsAndExtras{};
 
-        std::vector<uint8_t> data{};
+        std::vector<std::byte> data{};
 
         bool IsEmbeddedResource() const noexcept;
         void SetEmbeddedResource();
@@ -496,7 +497,7 @@ namespace gltf
         nlohmann::json extensionsAndExtras{};
 
         bool IsEmbeddedResource() const noexcept;
-        void MaterializeData(std::vector<uint8_t> & data) const;
+        void MaterializeData(std::vector<std::byte> & data) const;
     };
 
     struct Material
@@ -743,7 +744,7 @@ namespace gltf
 		std::string bufferRootPath{};
 		ReadQuotas readQuotas;
 
-		std::span<uint8_t> binaryData{};
+		std::span<std::byte> binaryData{};
 		std::size_t binaryOffset{};
 	};
 	
@@ -753,7 +754,7 @@ namespace gltf
 	
 	tl::expected<Document, JsonError> LoadFromBinary(std::istream & input, std::string const & documentRootPath, ReadQuotas const & readQuotas = {});
     tl::expected<Document, JsonError> LoadFromBinary(std::string const& documentFilePath, bool skip_buffers = false, ReadQuotas const& readQuotas = {});
-	tl::expected<Document, JsonError> LoadFromBinary(std::vector<uint8_t> binary, std::string const& documentFilePath, bool skip_buffers = false, ReadQuotas const& readQuotas = {});
+	tl::expected<Document, JsonError> LoadFromBinary(std::vector<std::byte>&& binary, std::string const& documentFilePath, bool skip_buffers = false, ReadQuotas const& readQuotas = {});
 
 	[[nodiscard]] std::optional<JsonError> Save(Document const & document, std::ostream & output, const std::string &documentRootPath, bool useBinaryFormat, bool useCbor = false);
     [[nodiscard]] std::optional<JsonError> Save(Document const& document, std::string documentFilePath, bool useBinaryFormat, bool useCbor = false);
