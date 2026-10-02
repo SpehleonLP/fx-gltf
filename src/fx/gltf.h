@@ -744,7 +744,7 @@ namespace gltf
 		std::string bufferRootPath{};
 		ReadQuotas readQuotas;
 
-		std::span<std::byte> binaryData{};
+		std::span<std::byte const> binaryData{};
 		std::size_t binaryOffset{};
 	};
 	
