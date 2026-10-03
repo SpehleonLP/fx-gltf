@@ -317,6 +317,13 @@ namespace gltf
             {
                 throw invalid_gltf_document("Invalid buffer.uri value", "malformed base64");
             }
+
+            // The estimate above only bounds byteLength from above; consumers bound
+            // bufferViews against byteLength, so a shorter decode would be over-read.
+            if (buffer.data.size() < buffer.byteLength)
+            {
+                throw invalid_gltf_document("Invalid buffer.uri value", "decoded data is shorter than byteLength");
+            }
         }
 
 		void LoadBuffers(std::vector<Buffer> & buffers, DataContext const& dataContext)
