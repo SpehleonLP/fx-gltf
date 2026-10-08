@@ -1,6 +1,7 @@
 #include "agi_articulation.h"
 #include "Support/unsafe_view.hpp"
 #include <fx/gltf.h>
+#include <cctype>
 
 #define READ(x) fx::gltf::detail::ReadOptionalField(#x, json, obj.x)
 #define WRITE(x) fx::gltf::detail::WriteField(#x, json, obj.x)
@@ -186,60 +187,39 @@ AGI_Lock AGI_LockFromArticulations(unsafe_view<Articulations::Articulation::Stag
 	return (AGI_Lock)lock;
 }
 
+// A node name opts axes out of articulation: `LOCK…<group><axes>…[:rest]`, groups T, R, S with
+// axes x y z (u, uniform scale, in S), or a whole `_`-delimited token `all`. The parse stops at
+// ':' and never reads past the view; each group is read once.
 AGI_Lock AGI_LockFromString(std::string_view name)
 {
-	if(name.find("LOCK") != 0)
+	if(name.substr(0, 4) != "LOCK")
 		return {};
 
-	std::string_view tokens = name.substr(0, name.find_first_of(':'));
-
-	size_t i = 0;
+	std::string_view const tokens = name.substr(0, name.find(':'));
+	// `all` is a whole token, so `LOCK_Tx_ball` is not All; the scan starts after the prefix.
+	for(size_t b = 4; b <= tokens.size();)
+	{
+		size_t e = tokens.find('_', b);
+		if(e == std::string_view::npos) e = tokens.size();
+		if(tokens.substr(b, e - b) == "all")
+			return All;
+		b = e + 1;
+	}
 
 	int lock = 0;
-	
-	while(true)
+	for(size_t i = tokens.find_first_of("TRS"); i != std::string_view::npos; i = tokens.find_first_of("TRS", i))
 	{
-		i = tokens.find_first_of("TRS", i);
-
-		if(i > tokens.size())
-		{
-			if(tokens.find("all"))
-				return All;
-
-			break;
-		}
-
+		char const group = tokens[i++];
 		int flags = 0;
-
-		for(auto p = &tokens[i+1]; ;++p)
+		for(; i < tokens.size(); ++i)
 		{
-			auto c = tolower(*p);
-
-			if('x' <= c && c <= 'z')
-			{
-				flags |= 1 << (c - 'x');
-			}
-			else if(c == 'u')
-			{
-				flags |= 4;
-			}
-			else
-				break;
+			int const c = std::tolower(static_cast<unsigned char>(tokens[i]));
+			if('x' <= c && c <= 'z')           flags |= 1 << (c - 'x');
+			else if(c == 'u' && group == 'S')  flags |= 8;
+			else                               break;
 		}
-
-		if(tokens[i] != 'S')
-			flags &= 0x07;
-
-		if(tokens[i] == 'T')
-			flags <<= 0;
-		else if(tokens[i] == 'R')
-			flags <<= 3;
-		else if(tokens[i] == 'S')
-			flags <<= 6;
-
-		lock |= flags;
+		lock |= flags << (group == 'T' ? 0 : group == 'R' ? 3 : 6);
 	}
-	
 	return (AGI_Lock)lock;
 }
 
