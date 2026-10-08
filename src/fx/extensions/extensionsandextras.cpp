@@ -694,6 +694,17 @@ void from_json(nlohmann::json const& json, Material & material)
 	fx::gltf::detail::ReadOptionalField("RENDER_ORDER", json, material.RENDER_ORDER);
 	material.KRE_has_coat         = ReadFlag(json, "KRE_has_coat");
 	material.KRE_albedo_over_coat = ReadFlag(json, "KRE_albedo_over_coat");
+	if(json.is_object())
+	{
+		if(auto t = json.find("LF_SHELL_THICKNESS"); t != json.end() && t->is_number())
+		{
+			material.LF_SHELL_THICKNESS = t->get<double>();
+		}
+		if(auto f = json.find("LF_THIN_SHELL"); f != json.end() && (f->is_boolean() || f->is_number()))
+		{
+			material.LF_THIN_SHELL = ReadFlag(json, "LF_THIN_SHELL");
+		}
+	}
 #if HAVE_TEXTURE_PROJECTION
 	for(auto i = json.cbegin(); i != json.cend(); ++i)
 	{

@@ -9,6 +9,7 @@
 #include <fx/gltf.h>
 #include <array>
 #include <map>
+#include <optional>
 #include <vector>
 
 struct Empty
@@ -251,6 +252,10 @@ struct Material
 	//	as they did when the struct could not hold them.
 	bool KRE_has_coat{false};
 	bool KRE_albedo_over_coat{false};
+	//	The rintintin bake's thin-shell markers. An explicit LF_THIN_SHELL out-ranks the
+	//	name and alpha heuristics in both directions, so its presence is kept apart from its value.
+	std::optional<bool>   LF_THIN_SHELL;
+	std::optional<double> LF_SHELL_THICKNESS;
 
 	bool empty() const { return RENDER_ORDER < 0; }
 	bool operator==(Material const& it) const { return RENDER_ORDER == it.RENDER_ORDER; }
