@@ -667,3 +667,44 @@ TEST(ExtensionNames, TheStandardDdsMimeIsReadAsRawStorage)
 		EXPECT_EQ(*back, s) << "storage " << (int)s;
 	}
 }
+
+// The coat flags are read-only custom properties: the struct reads them (int or bool,
+// anything else false) and Pack's merge must leave the authored keys where they were.
+// Falsifier: emit them in to_json(Extras::Material) and the probe erases then rewrites
+// them as bools, or read them as strict bools and the Blender int form reads false.
+TEST(EeRoundTrip, MaterialCoatFlagsAreReadAndPassThroughPack)
+{
+	fx::gltf::Document doc;
+	doc.materials.resize(3);
+	doc.materials[0].extensionsAndExtras["extras"] = {{"KRE_has_coat", 1}, {"KRE_albedo_over_coat", 0}};
+	doc.materials[1].extensionsAndExtras["extras"] = {{"KRE_has_coat", true}, {"KRE_albedo_over_coat", true}};
+	doc.materials[2].extensionsAndExtras["extras"] = {{"KRE_has_coat", "yes"}};
+	fx::ExtensionsAndExtras ee;
+	ee.Unpack(doc);
+	ASSERT_EQ(ee.materials.size(), 3u);
+	EXPECT_TRUE(ee.materials[0].extras.KRE_has_coat);
+	EXPECT_FALSE(ee.materials[0].extras.KRE_albedo_over_coat);
+	EXPECT_TRUE(ee.materials[1].extras.KRE_has_coat);
+	EXPECT_TRUE(ee.materials[1].extras.KRE_albedo_over_coat);
+	EXPECT_FALSE(ee.materials[2].extras.KRE_has_coat) << "a string is not a flag";
+
+	ee.Pack(doc);
+	EXPECT_EQ(doc.materials[0].extensionsAndExtras["extras"]["KRE_has_coat"], 1);
+	EXPECT_EQ(doc.materials[1].extensionsAndExtras["extras"]["KRE_albedo_over_coat"], true);
+	EXPECT_EQ(doc.materials[2].extensionsAndExtras["extras"]["KRE_has_coat"], "yes");
+}
+
+// A texture reference's KHR_texture_transform: an authored identity is present, an
+// absent one is not, because the matrix built from the former differs in signed zeros.
+// Falsifier: set hasTextureTransform unconditionally.
+TEST(EeRoundTrip, TextureReferenceTransformRecordsPresence)
+{
+	Extensions::Material::Texture absent = nlohmann::json::object().get<Extensions::Material::Texture>();
+	EXPECT_FALSE(absent.hasTextureTransform);
+
+	nlohmann::json const j = {{"KHR_texture_transform", {{"offset", {0.5f, 0.25f}}, {"texCoord", 1}}}};
+	Extensions::Material::Texture const present = j.get<Extensions::Material::Texture>();
+	EXPECT_TRUE(present.hasTextureTransform);
+	EXPECT_FLOAT_EQ(present.textureTransform.offset[0], 0.5f);
+	EXPECT_EQ(present.textureTransform.texCoord, 1);
+}

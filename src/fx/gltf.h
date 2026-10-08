@@ -766,8 +766,10 @@ namespace gltf
 	void from_json(nlohmann::json const& json, Image & buffer);
 	void from_json(nlohmann::json const& json, BufferView & buffer);
 	void from_json(nlohmann::json const& json, Buffer & buffer);
+	void from_json(nlohmann::json const& json, Material::Texture & materialTexture);
 
 	void to_json(nlohmann::json & json, Image const& buffer);
+	void to_json(nlohmann::json & json, Material::Texture const& materialTexture);
 	void to_json(nlohmann::json & json, Buffer const& buffer);
 	void to_json(nlohmann::json & json, BufferView const& buffer);
 	void to_json(nlohmann::json & json, Document const& document);

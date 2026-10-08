@@ -20,6 +20,8 @@ static void WarnRetired(char const* spelling)
 	               "-- KreAssetMigration gates this.", spelling);
 }
 
+//	The legacy texture slots stay out: they are read-only and never written back,
+//	so two lobes that write the same JSON are equal.
 bool sheen_lobe::operator==(sheen_lobe const& b) const
 {
 	return colorFactor == b.colorFactor && roughnessFactor == b.roughnessFactor;
@@ -29,6 +31,8 @@ void from_json(nlohmann::json const& json, sheen_lobe & lobe)
 {
 	fx::gltf::detail::ReadOptionalField("colorFactor",     json, lobe.colorFactor);
 	fx::gltf::detail::ReadOptionalField("roughnessFactor", json, lobe.roughnessFactor);
+	fx::gltf::detail::ReadOptionalField("colorTexture",     json, lobe.legacyColorTexture);
+	fx::gltf::detail::ReadOptionalField("roughnessTexture", json, lobe.legacyRoughnessTexture);
 	if(json.is_object())
 	{
 		for(char const* retired : { "tint", "level", "colorTexture", "roughnessTexture" })

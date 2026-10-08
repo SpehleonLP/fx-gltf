@@ -8,13 +8,6 @@
 #define ReadOptField(x) \
 	fx::gltf::detail::ReadOptionalField(#x, json, material. x);
 
-namespace fx { namespace gltf {
-void to_json(nlohmann::json & json, Material::Texture const& materialTexture);
-void from_json(nlohmann::json const& json, Material::Texture & materialTexture);
-
-//bool operator==(const Material::Texture & a, const Material::Texture & b);
-}}
-
 bool KHR::materials::pbrSpecularGlossiness::operator==(const pbrSpecularGlossiness & b) const
 {
 	return diffuseFactor             == b.diffuseFactor

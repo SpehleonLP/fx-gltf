@@ -26,6 +26,13 @@ struct sheen_lobe
 	std::array<float, 3> colorFactor{0.f, 0.f, 0.f};
 	float                roughnessFactor{0.f};
 
+	//	READ-ONLY: the per-pixel slots an older cook wrote. The loader ignores them,
+	//	but a re-cooked old document still references its textures through them, so
+	//	the cook's texture GC must see them or those textures vanish. to_json never
+	//	writes them and operator== ignores them, so nothing new can carry them on.
+	fx::gltf::Material::Texture legacyColorTexture;
+	fx::gltf::Material::Texture legacyRoughnessTexture;
+
 	bool is_empty{true};
 	bool empty() const noexcept { return is_empty; }
 	bool operator==(sheen_lobe const& b) const;

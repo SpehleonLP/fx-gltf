@@ -42,9 +42,15 @@ typedef ::Empty Sampler;
 
 struct Material
 {
+	//	The extensions of one texture reference (a material's textureInfo), which the
+	//	document-level Unpack does not reach: read from the reference's own JSON.
+	//	READ-ONLY: nothing writes it back. Presence is kept apart from the value because an
+	//	authored identity transform is not the same bytes as none: the matrix built from it
+	//	carries -0.f where the identity default carries 0.f, and cooks compare bytes.
 	struct Texture
 	{
 		KHR::Texture::Transform textureTransform;
+		bool                    hasTextureTransform{false};
 	};
 
 	KHR::materials::pbrSpecularGlossiness pbrSpecularGlossiness;
@@ -221,6 +227,7 @@ void from_json(const nlohmann::json & json, Node & db);
 void from_json(const nlohmann::json & json, Scene & db);
 void from_json(const nlohmann::json & json, Texture & extras);
 void from_json(const nlohmann::json & json, Material & material);
+void from_json(const nlohmann::json & json, Material::Texture & texture);
 
 };
 
@@ -239,10 +246,18 @@ struct Material
 
 	float RENDER_ORDER{-1};
 
+	//	READ-ONLY Blender custom properties: to_json never writes them, so Pack's
+	//	merge leaves the authored keys in place, and empty()/operator== ignore them
+	//	as they did when the struct could not hold them.
+	bool KRE_has_coat{false};
+	bool KRE_albedo_over_coat{false};
 
 	bool empty() const { return RENDER_ORDER < 0; }
 	bool operator==(Material const& it) const { return RENDER_ORDER == it.RENDER_ORDER; }
 };
+
+void to_json(nlohmann::json & , Material const& );
+void from_json(const nlohmann::json & , Material & );
 
 typedef ::Empty Primitive;
 

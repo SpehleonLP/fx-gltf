@@ -37,3 +37,23 @@ TEST(KreMaterialsLobes, RetiredTintLevelSpellingParsesToNoSheenAndWarns)
 	// text without owning the loguru callback, so the migration row (Task 1 step 5)
 	// is the machine check for the corpus. Here we pin only the parse result.
 }
+
+// An older cook wrote per-pixel sheen slots; the cook's texture GC still has to see
+// them on a re-cook, but nothing may write them again or count them in equality.
+// Falsifier: drop the two ReadOptionalField calls, or emit the slots in to_json.
+TEST(KreMaterialsLobes, LegacySheenTextureSlotsAreReadButNeverWritten)
+{
+	nlohmann::json const j = { {"colorTexture", {{"index", 4}}}, {"roughnessTexture", {{"index", 5}}} };
+	KRE::materials::sheen_lobe const in = j.get<KRE::materials::sheen_lobe>();
+	EXPECT_EQ(in.legacyColorTexture.index, 4);
+	EXPECT_EQ(in.legacyRoughnessTexture.index, 5);
+	EXPECT_FALSE(in.empty()) << "a sheen object is a lobe whatever it carries, as before the slots were read";
+
+	nlohmann::json const out = in;
+	EXPECT_EQ(out.find("colorTexture"), out.end());
+	EXPECT_EQ(out.find("roughnessTexture"), out.end());
+
+	KRE::materials::sheen_lobe bare;
+	bare.is_empty = false;
+	EXPECT_TRUE(in == bare) << "the slots must not split a dedup that compares lobes";
+}

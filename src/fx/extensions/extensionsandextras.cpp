@@ -649,18 +649,51 @@ void from_json(const nlohmann::json & json, Material & material)
 		fx::gltf::detail::ReadOptionalField("dispersion", *it, material.dispersion);
 }
 
+void from_json(const nlohmann::json & json, Material::Texture & texture)
+{
+	texture.hasTextureTransform = fx::gltf::detail::ReadOptionalField("KHR_texture_transform", json, texture.textureTransform);
+}
+
 }
 
 namespace Extras
 {
-inline void to_json(nlohmann::json & json, Material const& material)
+//	Blender 3.2 exports a bool custom property as the JSON int 0/1 and newer
+//	authoring may emit a real bool, so both are accepted. Anything else (string,
+//	array) is false rather than an error: the property is an author's checkbox,
+//	and a typed read failure would refuse the whole material over it.
+static bool ReadFlag(nlohmann::json const& json, char const* key)
+{
+	if(!json.is_object())
+	{
+		return false;
+	}
+	auto it = json.find(key);
+	if(it == json.end())
+	{
+		return false;
+	}
+	if(it->is_boolean())
+	{
+		return it->get<bool>();
+	}
+	if(it->is_number())
+	{
+		return it->get<double>() != 0.0;
+	}
+	return false;
+}
+
+void to_json(nlohmann::json & json, Material const& material)
 {
 	fx::gltf::detail::WriteField("RENDER_ORDER", json, material.RENDER_ORDER, 0.f);
 }
 
-inline void from_json(nlohmann::json const& json, Material & material)
+void from_json(nlohmann::json const& json, Material & material)
 {
 	fx::gltf::detail::ReadOptionalField("RENDER_ORDER", json, material.RENDER_ORDER);
+	material.KRE_has_coat         = ReadFlag(json, "KRE_has_coat");
+	material.KRE_albedo_over_coat = ReadFlag(json, "KRE_albedo_over_coat");
 #if HAVE_TEXTURE_PROJECTION
 	for(auto i = json.cbegin(); i != json.cend(); ++i)
 	{
